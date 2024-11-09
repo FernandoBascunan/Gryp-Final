@@ -1,0 +1,104 @@
+.login-page {
+  --background: linear-gradient(180deg, #0877DE 10%, #00B3FF 99%) !important;
+}
+
+
+.login-page ion-item {
+  --background: transparent;
+  --border-color: rgba(255, 255, 255, 0.5);
+  --color: white;
+  margin-bottom: 20px;
+}
+.form-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 20px;
+}
+
+.form-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.form-content h1{
+  text-align: center;
+}
+
+.form-content a{
+  text-decoration: none;
+}
+
+.form-content ion-item {
+  --background: transparent;
+  --border-color: rgba(0, 0, 0, 0.2);
+  --color: black;
+  margin-bottom: 20px;
+}
+
+.form-content ion-label {
+  --color: black;
+}
+
+.form-content ion-button {
+  margin-top: 20px;
+}
+
+ion-header ion-toolbar {
+  --background: black;
+  --color: white;
+  display: flex;
+}
+
+ion-header ion-title {
+  display: flex;
+  align-items: center;
+}
+
+
+ion-header ion-title ion-icon {
+  font-size: 34px;
+  margin-right: 8px;
+  display: inline-flex;
+  vertical-align: middle;
+  position: relative;
+  top: -1px; 
+}
+
+
+ion-header ion-title::part(native) {
+  display: flex;
+  align-items: center;
+}
+
+ion-header ion-title span {
+  display: inline-flex;
+  align-items: center;
+}
+
+ion-footer {
+  background-color: black;
+  padding: 10px 0;
+}
+
+.social-icons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.social-icons ion-icon {
+  font-size: 24px;
+  color: white;
+  margin: 0 15px;
+}
+
+
+ion-content {
+  --padding-bottom: 56px;
+}

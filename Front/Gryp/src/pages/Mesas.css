@@ -1,0 +1,63 @@
+.mesa {
+  width: 20%;
+  aspect-ratio: 1;
+  background-color: #f4f4f4;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  margin: 1px;
+}
+
+.mesa.seleccionada {
+  background-color: #e0e0e0;
+  border-color: #007bff;
+}
+
+.numero-mesa {
+  z-index: 1;
+}
+
+.icono-seleccionado {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  color: #007bff;
+  font-size: 18px;
+}
+
+.mesa:hover {
+  transform: scale(1.05);
+}
+
+.mesa.ocupada {
+  background-color: #ff4961;
+}
+
+.mesa.desocupada {
+  background-color: #2dd36f;
+}
+.acciones{
+  display: flex;
+  justify-content: center; 
+  flex-direction: column; 
+  gap: 10px;
+  margin-bottom: 20px; 
+}
+
+
+.boton-accion {
+  font-size: 14px; 
+  padding: 8px 16px; 
+  border-radius: 6px;
+  width: 25%; 
+  display: flex;
+  align-items: center; 
+  justify-content: center;
+}

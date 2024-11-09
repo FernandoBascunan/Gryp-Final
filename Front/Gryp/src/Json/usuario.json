@@ -1,0 +1,19 @@
+[
+    {
+        "email": "usuario@ejemplo.com",
+        "password": "password123",
+        "name": "Pepito Perez",
+        "location": "Avenida Brasil 2241,Valparaíso",
+        "phone": "+1 234 567 890",
+        "rut":"12.345.678-9"
+    },
+    {
+        "email": "admin1@gmail.com",
+        "password": "password123",
+        "name": "Juanito Perez",
+        "location": "Avenida Brasil 2241,Valparaíso",
+        "phone": "+1 234 567 890",
+        "rut":"12.345.678-k"
+    }
+]
+  

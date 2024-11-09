@@ -1,0 +1,37 @@
+.ordenes-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 3fr));
+    gap: 10px;
+    padding: 10px;
+  }
+  
+  .orden-card {
+    cursor: pointer;
+  }
+  
+  .orden-id {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    font-size: 0.8em;
+    color: #888;
+  }
+  
+  .orden-mesa {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    font-size: 0.8em;
+    color: #888;
+  }
+  
+  .orden-cajero {
+    font-size: 0.9em;
+    color: #666;
+  }
+  
+  .orden-pedido {
+    font-size: 1.1em;
+    font-weight: bold;
+    margin-top: 5px;
+  }

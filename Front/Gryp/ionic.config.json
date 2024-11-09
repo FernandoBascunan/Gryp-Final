@@ -1,0 +1,7 @@
+{
+  "name": "Gryp",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react-vite"
+}
