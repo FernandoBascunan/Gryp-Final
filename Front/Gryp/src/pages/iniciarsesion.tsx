@@ -1,131 +1,121 @@
-import React, { useState } from 'react';
-import { IonContent, IonPage, IonInput, IonButton, IonItem, IonLabel, IonHeader, IonToolbar, IonTitle, IonIcon, IonFooter, IonRouterOutlet } from '@ionic/react';
-import { useHistory } from 'react-router-dom';
+import { useState } from 'react';
+import { 
+  IonContent, 
+  IonPage, 
+  IonItem, 
+  IonLabel, 
+  IonInput, 
+  IonButton, 
+  IonToast, 
+  useIonRouter,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonFooter,
+  IonIcon,
+  IonSpinner
+} from '@ionic/react';
+import { logoFacebook, logoInstagram, logoTwitter, lockClosed } from 'ionicons/icons';
 import './iniciarsesion.css';
-import { logoFacebook, logoTwitter, logoInstagram } from 'ionicons/icons';
-import usuarioData from '../Json/usuario.json';
+import { useHistory } from 'react-router-dom';
 
-
-const iniciarsesion: React.FC = () => {
+const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [loginError, setLoginError] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useIonRouter();
   const history = useHistory();
 
-  const validateEmail = (email: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(String(email).toLowerCase());
+  const handleLogin = async (e: React.FormEvent) => {
   };
-
-  const validatePassword = (password: string) => {
-    const re = /^[A-Za-z\d@$!%*?&]{8,}$/;
-    return re.test(password);
-  };
-
-  const handleLogin = () => {
-    let valid = true;
-
-    if (!validateEmail(email)) {
-      setEmailError('Formato de correo electrónico incorrecto.');
-      valid = false;
-    } else {
-      setEmailError('');
-    }
-
-    if (!validatePassword(password)) {
-      setPasswordError('La contraseña debe tener al menos 8 caracteres.');
-      valid = false;
-    } else {
-      setPasswordError('');
-    }
-    interface Usuario {
-      email: string;
-      password: string;
-      name: string;
-      location: string;
-      phone: string;
-      rut: string;
-    }
-    if (valid) {
-      const usuarioList: Usuario[] = usuarioData as Usuario[];
-      const user = usuarioList.find((u) => u.email === email && u.password === password);
-      
-      if (user) {
-        setLoginError('');
-        history.push('./Tab1');
-      } else {
-        setLoginError('El usuario o la contraseña no son correctos.');
-      }
-    }
-  };
-
+ 
+  
   const handleRegister = () => {
     history.push('./registro');
   };
-
   return (
-    <IonPage>
+    <IonPage className="login-page">
       <IonHeader>
         <IonToolbar>
           <IonTitle>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{
-                width: '24px',
-                height: '24px',
-                backgroundColor: '#007bff',
-                borderRadius: '50%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: '8px',
-                color: 'white',
-                fontWeight: 'bold'
-              }}>
-                G
-              </div>
+            <span>
+              <IonIcon icon={lockClosed} />
               Gryp
-            </div>
+            </span>
           </IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent className="login-page">
+
+      <IonContent className="ion-padding">
         <div className="form-container">
           <div className="form-content">
-            <h1>Inicia Sesión</h1>
-            <IonItem>
-              <IonLabel position="floating">Email</IonLabel>
-              <IonInput type="email" value={email} onIonChange={(e) => setEmail(e.detail.value!)} />
-            </IonItem>
-            {emailError && <p style={{ color: 'red' }}>{emailError}</p>}
+            <h1>Iniciar Sesión</h1>
+            
+            <form onSubmit={handleLogin}>
+              <IonItem>
+                <IonLabel position="floating">Email</IonLabel>
+                <IonInput
+                  type="email"
+                  value={email}
+                  onIonChange={e => setEmail(e.detail.value!)}
+                  required
+                  disabled={isLoading}
+                />
+              </IonItem>
 
-            <IonItem>
-              <IonLabel position="floating">Password</IonLabel>
-              <IonInput type="password" value={password} onIonChange={(e) => setPassword(e.detail.value!)} />
-            </IonItem>
-            {passwordError && <p style={{ color: 'red' }}>{passwordError}</p>}
+              <IonItem>
+                <IonLabel position="floating">Contraseña</IonLabel>
+                <IonInput
+                  type="password"
+                  value={password}
+                  onIonChange={e => setPassword(e.detail.value!)}
+                  required
+                  disabled={isLoading}
+                />
+              </IonItem>
 
-            {loginError && <p style={{ color: 'red' }}>{loginError}</p>}
-            <a href='#'>Olvido su contraseña?</a>
-            <IonButton expand="block" onClick={handleLogin}>
-              Login
-            </IonButton>
-            <IonButton expand="block" onClick={handleRegister}>
+              <IonButton 
+                expand="block" 
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <IonSpinner name="crescent" />
+                ) : (
+                  'Iniciar Sesión'
+                )}
+              </IonButton>
+              <IonButton expand="block" onClick={handleRegister}>
               Registrarme
-            </IonButton>
+              </IonButton>
+
+              <div className="ion-text-center ion-margin-top">
+                <a href="/forgot-password">¿Olvidaste tu contraseña?</a>
+              </div>
+            </form>
           </div>
         </div>
+
+        <IonToast
+          isOpen={showToast}
+          onDidDismiss={() => setShowToast(false)}
+          message={toastMessage}
+          duration={3000}
+          color="danger"
+        />
       </IonContent>
+
       <IonFooter>
         <div className="social-icons">
+          <IonIcon icon={logoFacebook} />
           <IonIcon icon={logoInstagram} />
           <IonIcon icon={logoTwitter} />
-          <IonIcon icon={logoFacebook} />
         </div>
       </IonFooter>
     </IonPage>
   );
 };
 
-export default iniciarsesion;
+export default Login;

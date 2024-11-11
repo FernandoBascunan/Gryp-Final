@@ -4,7 +4,7 @@ import {
   setupIonicReact
 } from '@ionic/react';
 import AppRouter from './Routes/AppRouter';
-import Mesas from './pages/Mesas';
+
 
 
 
@@ -42,8 +42,6 @@ setupIonicReact();
 const App: React.FC = () => (
   <IonApp>
       <AppRouter/>
-
-        
   </IonApp>
 );
 
