@@ -17,9 +17,11 @@ import './Perfil.css';
 import { useHistory } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
+import { useUser } from '../Context';
 
 const Perfil: React.FC = () => {
   const history = useHistory();
+  const { user, setUser } = useUser(); 
 
   const handleLoginRedirect = () => {
     history.push('/iniciarsesion');
@@ -38,7 +40,7 @@ const Perfil: React.FC = () => {
 
   return (
     <IonPage>
-      <Header/>
+      <Header />
       <IonHeader>
         <IonToolbar>
           <IonTitle>Perfil</IonTitle>
@@ -49,8 +51,8 @@ const Perfil: React.FC = () => {
           <IonAvatar className="large-avatar">
             <img src="https://gravatar.com/avatar/dba6bae8c566f9d4041fb9cd9ada7741?d=identicon&f=y" alt="Avatar" />
           </IonAvatar>
-          <h2>Nombre de Usuario</h2>
-          <p>Restaurante: Mi Restaurante</p>
+          <h2>{user?.userName || "Nombre de Usuario"}</h2>
+          <p>Restaurante: {user?.userName || "Mi Restaurante"}</p>
         </div>
 
         <IonList>
@@ -59,35 +61,34 @@ const Perfil: React.FC = () => {
             <IonIcon icon={idCardOutline} slot="start" />
             <IonLabel>
               <h2>Rut</h2>
-              <p>12.345.678-9</p>
+              <p>{user?.rut}</p>
             </IonLabel>
           </IonItem>
           <IonItem>
             <IonIcon icon={mailOutline} slot="start" />
             <IonLabel>
               <h2>Email</h2>
-              <p>usuario@ejemplo.com</p>
+              <p>{user?.email }</p>
             </IonLabel>
           </IonItem>
           <IonItem>
             <IonIcon icon={callOutline} slot="start" />
             <IonLabel>
               <h2>Teléfono</h2>
-              <p>+1 234 567 890</p>
+              <p>{user?.phone }</p>
             </IonLabel>
           </IonItem>
           <IonItem>
             <IonIcon icon={compassOutline} slot="start" />
             <IonLabel>
               <h2>Dirección</h2>
-              <p>Avenida Brasil 2241,Valparaíso</p>
+              <p>{user?.region }</p>
             </IonLabel>
           </IonItem>
         </IonList>
 
         <IonList>
           <IonListHeader>Opciones</IonListHeader>
-          
           <IonItem button onClick={handleLoginRedirect}>
             <IonIcon icon={logOut} slot="start" />
             <IonLabel>Cerrar Sesión</IonLabel>
@@ -101,9 +102,8 @@ const Perfil: React.FC = () => {
             <IonLabel>Reportes Mensuales</IonLabel>
           </IonItem>
         </IonList>
-        
       </IonContent>
-      <Footer/>
+      <Footer />
     </IonPage>
   );
 };

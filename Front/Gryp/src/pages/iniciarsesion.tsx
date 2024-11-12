@@ -1,121 +1,168 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   IonContent, 
   IonPage, 
-  IonItem, 
-  IonLabel, 
   IonInput, 
   IonButton, 
-  IonToast, 
-  useIonRouter,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
+  IonItem, 
+  IonLabel, 
+  IonHeader, 
+  IonToolbar, 
+  IonTitle, 
+  IonIcon, 
   IonFooter,
-  IonIcon,
-  IonSpinner
+  IonLoading,
+  useIonToast
 } from '@ionic/react';
-import { logoFacebook, logoInstagram, logoTwitter, lockClosed } from 'ionicons/icons';
-import './iniciarsesion.css';
 import { useHistory } from 'react-router-dom';
+import { logoFacebook, logoTwitter, logoInstagram } from 'ionicons/icons';
+import './iniciarsesion.css';
+import { useUser } from '../Context';
 
-const Login: React.FC = () => {
+const IniciarSesion: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useIonRouter();
+  const { setUser } = useUser();
   const history = useHistory();
-
-  const handleLogin = async (e: React.FormEvent) => {
-  };
- 
   
+ 
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(String(email).toLowerCase());
+  };
+
+  const validatePassword = (password: string) => {
+    const re = /^[A-Za-z\d@$!%*?&]{8,}$/;
+    return re.test(password);
+  };
+
+  const handleLogin = async (e: React.FormEvent) =>{
+    e.preventDefault();
+    
+    try {
+      const response = await fetch('http://localhost:3000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setToastMessage(data.error || 'Error al iniciar sesión');
+        setShowToast(true);
+        return;
+      }
+
+      // Guardar datos del usuario en localStorage
+      const transData=setUser(data);
+      
+      // Redirigir al home
+      history.push('/Tab1');
+      
+    } catch (error) {
+      setToastMessage('Error de conexión con el servidor');
+      setShowToast(true);
+    }
+  };
+
   const handleRegister = () => {
     history.push('./registro');
   };
+
   return (
-    <IonPage className="login-page">
+    <IonPage>
       <IonHeader>
         <IonToolbar>
           <IonTitle>
-            <span>
-              <IonIcon icon={lockClosed} />
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                backgroundColor: '#007bff',
+                borderRadius: '50%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: '8px',
+                color: 'white',
+                fontWeight: 'bold'
+              }}>
+                G
+              </div>
               Gryp
-            </span>
+            </div>
           </IonTitle>
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
+      <IonContent className="login-page">
         <div className="form-container">
           <div className="form-content">
-            <h1>Iniciar Sesión</h1>
+            <h1>Inicia Sesión</h1>
             
-            <form onSubmit={handleLogin}>
-              <IonItem>
-                <IonLabel position="floating">Email</IonLabel>
-                <IonInput
-                  type="email"
-                  value={email}
-                  onIonChange={e => setEmail(e.detail.value!)}
-                  required
-                  disabled={isLoading}
-                />
-              </IonItem>
+            <IonItem>
+              <IonLabel position="floating">Email</IonLabel>
+              <IonInput 
+                type="email" 
+                value={email} 
+                onIonChange={(e) => setEmail(e.detail.value!)}
+                required 
+              />
+            </IonItem>
+            {emailError && <p className="error-message">{emailError}</p>}
 
-              <IonItem>
-                <IonLabel position="floating">Contraseña</IonLabel>
-                <IonInput
-                  type="password"
-                  value={password}
-                  onIonChange={e => setPassword(e.detail.value!)}
-                  required
-                  disabled={isLoading}
-                />
-              </IonItem>
-
-              <IonButton 
-                expand="block" 
-                type="submit"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <IonSpinner name="crescent" />
-                ) : (
-                  'Iniciar Sesión'
-                )}
-              </IonButton>
-              <IonButton expand="block" onClick={handleRegister}>
+            <IonItem>
+              <IonLabel position="floating">Password</IonLabel>
+              <IonInput 
+                type="password" 
+                value={password} 
+                onIonChange={(e) => setPassword(e.detail.value!)}
+                required
+              />
+            </IonItem>
+            {passwordError && <p className="error-message">{passwordError}</p>}
+            
+            <a href="#" onClick={(e) => { 
+              e.preventDefault(); 
+              history.push('./recuperar-password');
+            }}>
+              ¿Olvidaste tu contraseña?
+            </a>
+            
+            <IonButton expand="block" onClick={handleLogin} disabled={loading}>
+              Iniciar Sesión
+            </IonButton>
+            
+            <IonButton expand="block" onClick={handleRegister} disabled={loading}>
               Registrarme
-              </IonButton>
-
-              <div className="ion-text-center ion-margin-top">
-                <a href="/forgot-password">¿Olvidaste tu contraseña?</a>
-              </div>
-            </form>
+            </IonButton>
           </div>
         </div>
 
-        <IonToast
-          isOpen={showToast}
-          onDidDismiss={() => setShowToast(false)}
-          message={toastMessage}
-          duration={3000}
-          color="danger"
+        <IonLoading
+          isOpen={loading}
+          message={'Iniciando sesión...'}
+          spinner="circles"
         />
       </IonContent>
 
       <IonFooter>
         <div className="social-icons">
-          <IonIcon icon={logoFacebook} />
           <IonIcon icon={logoInstagram} />
           <IonIcon icon={logoTwitter} />
+          <IonIcon icon={logoFacebook} />
         </div>
       </IonFooter>
     </IonPage>
   );
 };
 
-export default Login;
+export default IniciarSesion;

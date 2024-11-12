@@ -26,13 +26,17 @@ CREATE TABLE workers (
 
 CREATE TABLE tables (
     tableID INT AUTO_INCREMENT PRIMARY KEY,
-    tableStatus BOOLEAN
+    tableStatus BOOLEAN,
+    userID INT,
+    FOREIGN KEY (userID) REFERENCES users(userID) ON DELETE CASCADE
 );
 
 CREATE TABLE orders (
     orderID INT AUTO_INCREMENT PRIMARY KEY,
     waiterID INT,
     tableID INT,
+    userID INT,
+    FOREIGN KEY (userID) REFERENCES users(userID) ON DELETE CASCADE,
     FOREIGN KEY (waiterID) REFERENCES waiter(waiterID) ON DELETE SET NULL,
     FOREIGN KEY (tableID) REFERENCES tables(tableID) ON DELETE SET NULL
 );
@@ -40,12 +44,16 @@ CREATE TABLE orders (
 CREATE TABLE menu (
     menuID INT AUTO_INCREMENT PRIMARY KEY,
     dishName VARCHAR(50),
-    dishStatus BOOLEAN
+    dishStatus BOOLEAN,
+    userID INT,
+    FOREIGN KEY (userID) REFERENCES users(userID) ON DELETE CASCADE
 );
 
 CREATE TABLE orderContent (
     orderID INT,
     menuID INT,
+    userID INT,
+    FOREIGN KEY (userID) REFERENCES users(userID) ON DELETE CASCADE,
     PRIMARY KEY (orderID, menuID),
     FOREIGN KEY (orderID) REFERENCES orders(orderID) ON DELETE CASCADE,
     FOREIGN KEY (menuID) REFERENCES menu(menuID) ON DELETE CASCADE
@@ -57,7 +65,9 @@ CREATE TABLE storage (
     loc VARCHAR(50),
     productName VARCHAR(50),
     amount BIGINT,
-    unit VARCHAR(3)
+    unit VARCHAR(3),
+    userID INT,
+    FOREIGN KEY (userID) REFERENCES users(userID) ON DELETE CASCADE
 );
 
 CREATE TABLE recipe (

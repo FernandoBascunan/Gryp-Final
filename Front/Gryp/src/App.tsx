@@ -4,6 +4,7 @@ import {
   setupIonicReact
 } from '@ionic/react';
 import AppRouter from './Routes/AppRouter';
+import { UserProvider } from './Context';
 
 
 
@@ -41,7 +42,10 @@ setupIonicReact();
 
 const App: React.FC = () => (
   <IonApp>
-      <AppRouter/>
+    <UserProvider>
+        <AppRouter/>
+    </UserProvider>
+      
   </IonApp>
 );
 
