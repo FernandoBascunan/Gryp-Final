@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   IonContent, 
   IonPage, 
@@ -17,33 +17,47 @@ import {
 import { useHistory } from 'react-router-dom';
 import { logoFacebook, logoTwitter, logoInstagram } from 'ionicons/icons';
 import './iniciarsesion.css';
-import { useUser } from '../Context';
 
 const IniciarSesion: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const { setUser } = useUser();
+  const [present] = useIonToast();
   const history = useHistory();
-  
- 
+
   const validateEmail = (email: string) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(String(email).toLowerCase());
   };
 
   const validatePassword = (password: string) => {
-    const re = /^[A-Za-z\d@$!%*?&]{8,}$/;
-    return re.test(password);
+    return password.length >= 8;
   };
 
-  const handleLogin = async (e: React.FormEvent) =>{
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validación
+    if (!validateEmail(email)) {
+      present({
+        message: 'Por favor ingrese un email válido',
+        duration: 3000,
+        color: 'danger'
+      });
+      return;
+    }
+  
+    if (!validatePassword(password)) {
+      present({
+        message: 'La contraseña debe tener al menos 8 caracteres',
+        duration: 3000,
+        color: 'danger'
+      });
+      return;
+    }
+  
+    setLoading(true);
+  
     try {
       const response = await fetch('http://localhost:3000/api/login', {
         method: 'POST',
@@ -52,31 +66,37 @@ const IniciarSesion: React.FC = () => {
         },
         body: JSON.stringify({ email, password }),
       });
-
+  
       const data = await response.json();
-
+  
       if (!response.ok) {
-        setToastMessage(data.error || 'Error al iniciar sesión');
-        setShowToast(true);
-        return;
+        throw new Error(data.message || 'Error al iniciar sesión');
       }
-
-      // Guardar datos del usuario en localStorage
-      const transData=setUser(data);
-      
+  
+      // Guardar el token en localStorage directamente
+      localStorage.setItem('token',data.token);
+  
+      present({
+        message: '¡Bienvenido!',
+        duration: 2000,
+        color: 'success'
+      });
+  
       // Redirigir al home
       history.push('/Tab1');
       
     } catch (error) {
-      setToastMessage('Error de conexión con el servidor');
-      setShowToast(true);
+      present({
+        message: error instanceof Error ? error.message : 'Error de conexión',
+        duration: 3000,
+        color: 'danger'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRegister = () => {
-    history.push('./registro');
-  };
-
+  // Resto del JSX se mantiene igual, solo actualizamos el manejo de errores
   return (
     <IonPage>
       <IonHeader>
@@ -117,7 +137,6 @@ const IniciarSesion: React.FC = () => {
                 required 
               />
             </IonItem>
-            {emailError && <p className="error-message">{emailError}</p>}
 
             <IonItem>
               <IonLabel position="floating">Password</IonLabel>
@@ -128,7 +147,6 @@ const IniciarSesion: React.FC = () => {
                 required
               />
             </IonItem>
-            {passwordError && <p className="error-message">{passwordError}</p>}
             
             <a href="#" onClick={(e) => { 
               e.preventDefault(); 
@@ -141,7 +159,7 @@ const IniciarSesion: React.FC = () => {
               Iniciar Sesión
             </IonButton>
             
-            <IonButton expand="block" onClick={handleRegister} disabled={loading}>
+            <IonButton expand="block" onClick={() => history.push('./registro')} disabled={loading}>
               Registrarme
             </IonButton>
           </div>

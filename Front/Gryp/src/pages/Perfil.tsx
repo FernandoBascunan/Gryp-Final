@@ -1,41 +1,121 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonContent,
-  IonHeader,
   IonPage,
-  IonTitle,
+  IonHeader,
   IonToolbar,
-  IonAvatar,
+  IonTitle,
+  IonButton,
   IonItem,
   IonLabel,
-  IonList,
-  IonListHeader,
+  IonInput,
+  IonLoading,
   IonIcon,
+  IonAvatar,
+  IonCard,
+  IonCardContent,
+  useIonToast,
+  IonButtons
 } from '@ionic/react';
-import { mailOutline, callOutline, settings, logOut, idCardOutline, compassOutline, documentOutline,peopleOutline } from 'ionicons/icons';
-import './Perfil.css';
+import { camera, pencil, logOut } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
+import axios from 'axios';
 import Header from './Header';
 import Footer from './Footer';
-import { useUser } from '../Context';
 
 const Perfil: React.FC = () => {
+  const [profile, setProfile] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [present] = useIonToast();
   const history = useHistory();
-  const { user, setUser } = useUser(); 
 
-  const handleLoginRedirect = () => {
-    history.push('/iniciarsesion');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [location, setLocation] = useState('');
+  const [rut, setRut] = useState('');
+
+
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token no encontrado. Inicia sesión nuevamente.');
+      }
+      console.log('Token recibido:', token);
+      const response = await axios.get('http://localhost:3000/api/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const profile = response.data;
+      setProfile(profile);
+      setName(profile.userName || '');
+      setPhone(profile.phone || '');
+      setLocation(profile.region || '');
+      setRut(profile.rut || '');
+    } catch (error: any) {
+      present({
+        message: error.response?.data?.message || 'Error al cargar el perfil',
+        duration: 3000,
+        color: 'danger'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
-  const handleProfile = () => {
-    history.push('/CrearPerfil');
+
+  const handleSaveProfile = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        throw new Error('Token no encontrado. Inicia sesión nuevamente.');
+      }
+
+      const response = await axios.put('http://localhost:3000/api/profile',
+        { userName: name, phone, region: location, rut },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const updatedProfile = response.data;
+      setProfile(updatedProfile);
+      setIsEditing(false);
+
+      present({
+        message: 'Perfil actualizado correctamente',
+        duration: 2000,
+        color: 'success'
+      });
+    } catch (error: any) {
+      present({
+        message: error.response?.data?.message || 'Error al actualizar el perfil',
+        duration: 3000,
+        color: 'danger'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReportDownload = () => {
-
-    const link = document.createElement('a');
-    link.href = '/Files/Reporte.pdf'; 
-    link.download = 'Reporte.pdf';
-    link.click();
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userID');
+    history.replace('/iniciarsesion');
   };
 
   return (
@@ -43,66 +123,89 @@ const Perfil: React.FC = () => {
       <Header />
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Perfil</IonTitle>
+          <IonTitle>Gryp</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={() => setIsEditing(!isEditing)}>
+              <IonIcon icon={pencil} />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
+
       <IonContent className="ion-padding">
-        <div className="profile-header">
-          <IonAvatar className="large-avatar">
-            <img src="https://gravatar.com/avatar/dba6bae8c566f9d4041fb9cd9ada7741?d=identicon&f=y" alt="Avatar" />
-          </IonAvatar>
-          <h2>{user?.userName || "Nombre de Usuario"}</h2>
-          <p>Restaurante: {user?.userName || "Mi Restaurante"}</p>
+        <IonCard>
+          <IonCardContent>
+            <div className="ion-text-center ion-padding">
+              <IonAvatar style={{ width: '100px', height: '100px', margin: '0 auto' }}>
+                <img src={'/assets/default-avatar.png'} alt="Profile" />
+              </IonAvatar>
+              <IonButton fill="clear" size="small">
+                <IonIcon icon={camera} />
+              </IonButton>
+            </div>
+
+            <IonItem>
+              <IonLabel position="stacked">Email</IonLabel>
+              <IonInput value={profile?.email} readonly type="email" />
+            </IonItem>
+
+            <IonItem>
+              <IonLabel position="stacked">Nombre</IonLabel>
+              <IonInput
+                value={profile?.userName}
+                onIonChange={e => setName(e.detail.value!)}
+                readonly={!isEditing}
+              />
+            </IonItem>
+
+            <IonItem>
+              <IonLabel position="stacked">Teléfono</IonLabel>
+              <IonInput
+                value={profile?.phone}
+                onIonChange={e => setPhone(e.detail.value!)}
+                readonly={!isEditing}
+                type="tel"
+              />
+            </IonItem>
+
+            <IonItem>
+              <IonLabel position="stacked">Ubicación</IonLabel>
+              <IonInput
+                value={profile?.region}
+                onIonChange={e => setLocation(e.detail.value!)}
+                readonly={!isEditing}
+              />
+            </IonItem>
+
+            <IonItem>
+              <IonLabel position="stacked">RUT</IonLabel>
+              <IonInput
+                value={rut}
+                onIonChange={e => setRut(e.detail.value!)}
+                readonly={!isEditing}
+              />
+            </IonItem>
+
+            {isEditing && (
+              <div className="ion-padding">
+                <IonButton expand="block" onClick={handleSaveProfile}>
+                  Guardar Cambios
+                </IonButton>
+              </div>
+            )}
+          </IonCardContent>
+        </IonCard>
+
+        <div className="ion-padding">
+          <IonButton expand="block" color="danger" onClick={handleLogout}>
+            <IonIcon slot="start" icon={logOut} />
+            Cerrar Sesión
+          </IonButton>
         </div>
 
-        <IonList>
-          <IonListHeader>Información de contacto</IonListHeader>
-          <IonItem>
-            <IonIcon icon={idCardOutline} slot="start" />
-            <IonLabel>
-              <h2>Rut</h2>
-              <p>{user?.rut}</p>
-            </IonLabel>
-          </IonItem>
-          <IonItem>
-            <IonIcon icon={mailOutline} slot="start" />
-            <IonLabel>
-              <h2>Email</h2>
-              <p>{user?.email }</p>
-            </IonLabel>
-          </IonItem>
-          <IonItem>
-            <IonIcon icon={callOutline} slot="start" />
-            <IonLabel>
-              <h2>Teléfono</h2>
-              <p>{user?.phone }</p>
-            </IonLabel>
-          </IonItem>
-          <IonItem>
-            <IonIcon icon={compassOutline} slot="start" />
-            <IonLabel>
-              <h2>Dirección</h2>
-              <p>{user?.region }</p>
-            </IonLabel>
-          </IonItem>
-        </IonList>
-
-        <IonList>
-          <IonListHeader>Opciones</IonListHeader>
-          <IonItem button onClick={handleLoginRedirect}>
-            <IonIcon icon={logOut} slot="start" />
-            <IonLabel>Cerrar Sesión</IonLabel>
-          </IonItem>
-          <IonItem button onClick={handleProfile}>
-            <IonIcon icon={peopleOutline} slot="start" />
-            <IonLabel>Gestionar Trabajadores</IonLabel>
-          </IonItem>
-          <IonItem button onClick={handleReportDownload}>
-            <IonIcon icon={documentOutline} slot="start" />
-            <IonLabel>Reportes Mensuales</IonLabel>
-          </IonItem>
-        </IonList>
+        <IonLoading isOpen={loading} message={'Cargando...'} spinner="circles" />
       </IonContent>
+
       <Footer />
     </IonPage>
   );
