@@ -68,9 +68,10 @@ const IniciarSesion: React.FC = () => {
       });
   
       const data = await response.json();
+      
   
       if (!response.ok) {
-        throw new Error(data.message || 'Error al iniciar sesión');
+        throw new Error(data.message || 'Email o contraseña incorrectos');
       }
   
       // Guardar el token en localStorage directamente

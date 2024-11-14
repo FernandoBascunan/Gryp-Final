@@ -1,13 +1,11 @@
+
 const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
-const authenticateToken = require('./middleware/auth');
-
 const app = express();
 const port = 3000;
-
 app.use(cors());
 app.use(bodyParser.json());
 require('dotenv').config();
@@ -26,6 +24,7 @@ connection.connect(err => {
   }
   console.log('Conectado a la base de datos');
 });
+
 
 // Crear nuevo usuario
 app.post('/api/users', (req, res) => {
@@ -54,7 +53,7 @@ app.post('/api/login', (req, res) => {
     }
     
     const user = results[0];
-    const token = jwt.sign({ id: user.userID }, process.env.JWT_SECRET, { expiresIn: '2h' });
+    const token = jwt.sign({ id: user.userID}, process.env.JWT_SECRET, { expiresIn: '2h' });
     console.log('Token generado:', token);
     res.json({ 
       success: true,
@@ -70,6 +69,9 @@ app.post('/api/login', (req, res) => {
     });
   });
 });
+
+
+
 
 
 
