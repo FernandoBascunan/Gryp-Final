@@ -52,10 +52,26 @@ app.post('/api/login', (req, res) => {
       return res.status(401).json({ error: 'Email o contraseña incorrectos' });
     }
     
-    const user = results[0];
-    const token = jwt.sign({ id: user.userID}, process.env.JWT_SECRET, { expiresIn: '2h' });
+    const user = results[0]; // Accede al primer resultado
+
+    console.log('Datos del usuario antes de generar el token:', user); // Verifica el contenido de `user`
+
+    // Genera el token con todos los datos necesarios
+    const token = jwt.sign(
+      {
+        id: user.userID,
+        userName: user.userName,
+        rut: user.rut,
+        email: user.email,
+        phone: user.phone,
+        region: user.region
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '2h' }
+    );
+    console.log(user);
     console.log('Token generado:', token);
-    res.json({ 
+    res.json({
       success: true,
       token,
       user: {
@@ -70,7 +86,20 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-
+app.get('/api/profile/:userID', (req, res) => {
+  const userID = req.params.userID; // Obtener el userID de los parámetros de la URL
+  const query = 'SELECT userName, rut, email, phone, region FROM users WHERE userID = ?';
+  connection.query(query, [userID], (err, results) => {
+      if (err) {
+          return res.status(500).json({ error: 'Error en el servidor' });
+      }
+      if (results.length === 0) {
+          return res.status(404).json({ error: 'No existen datos para cargar' });
+      }
+      // Enviar los datos del usuario como respuesta
+      res.status(200).json({ success: true, user: results[0] });
+  });
+});
 
 
 

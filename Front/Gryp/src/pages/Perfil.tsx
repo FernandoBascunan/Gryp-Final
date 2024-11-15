@@ -19,9 +19,10 @@ import {
 } from '@ionic/react';
 import { camera, pencil, logOut } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
-import useUserData from './useUserData';
+import useUserData from '../Hooks/useUserData';
+import Footer from './Footer';
+import Header from './Header';
 
 interface UserData {
   id: string;
@@ -32,41 +33,31 @@ interface UserData {
   region: string;
 }
 
-interface DecodedToken {
-  id: string;
-}
-
 const Perfil: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [present] = useIonToast();
   const history = useHistory();
-  const [user, setUser] = useState<UserData | null>(null);
 
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [location, setLocation] = useState('');
-  const [rut, setRut] = useState('');
+
 
   const users = useUserData();
+  const id = users?.id;
+  const userName= users?.userName;
+  const email=users?.email;
+  const rut=users?.rut;
+  const phone=users?.phone;
+  const region=users?.region;
 
-
-
-  
-
-  const handleSaveProfile = async () => {
-   
-  };
-
+  console.log('Datos Perfil: ',id,userName,email,rut,phone,region)
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userID');
-    localStorage.removeItem('user');
     history.replace('/iniciarsesion');
   };
 
   return (
     <IonPage>
+      <Header/>
       <IonHeader>
         <IonToolbar>
           <IonTitle>Gryp</IonTitle>
@@ -92,49 +83,32 @@ const Perfil: React.FC = () => {
 
             <IonItem>
               <IonLabel position="stacked">Email</IonLabel>
-              <IonInput value={user?.email} readonly type="email" />
+              <IonInput value={email} type="email" />
             </IonItem>
 
             <IonItem>
               <IonLabel position="stacked">Nombre</IonLabel>
-              <IonInput
-                value={name || user?.userName}
-                onIonChange={e => setName(e.detail.value!)}
-                readonly={!isEditing}
-              />
+              <IonInput value={userName}/>
             </IonItem>
 
             <IonItem>
               <IonLabel position="stacked">Teléfono</IonLabel>
-              <IonInput
-                value={phone || user?.phone}
-                onIonChange={e => setPhone(e.detail.value!)}
-                readonly={!isEditing}
-                type="tel"
-              />
+              <IonInput value={phone}/>
             </IonItem>
 
             <IonItem>
               <IonLabel position="stacked">Ubicación</IonLabel>
-              <IonInput
-                value={location || user?.region}
-                onIonChange={e => setLocation(e.detail.value!)}
-                readonly={!isEditing}
-              />
+              <IonInput value={region}/>
             </IonItem>
 
             <IonItem>
               <IonLabel position="stacked">RUT</IonLabel>
-              <IonInput
-                value={rut || user?.rut}
-                onIonChange={e => setRut(e.detail.value!)}
-                readonly={!isEditing}
-              />
+              <IonInput value={rut}/>
             </IonItem>
 
             {isEditing && (
               <div className="ion-padding">
-                <IonButton expand="block" onClick={handleSaveProfile}>
+                <IonButton expand="block" >
                   Guardar Cambios
                 </IonButton>
               </div>
@@ -151,6 +125,7 @@ const Perfil: React.FC = () => {
 
         <IonLoading isOpen={loading} message={'Cargando...'} spinner="circles" />
       </IonContent>
+      <Footer/>
     </IonPage>
   );
 };
