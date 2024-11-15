@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   IonContent,
   IonPage,
@@ -14,15 +14,15 @@ import {
   IonAvatar,
   IonCard,
   IonCardContent,
-  useIonToast,
-  IonButtons
+  IonButtons,
+  IonListHeader
 } from '@ionic/react';
-import { camera, pencil, logOut } from 'ionicons/icons';
+import { mailOutline, callOutline,  logOut, idCardOutline, compassOutline, documentOutline,peopleOutline ,camera, pencil, mail,peopleCircle} from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
-import axios from 'axios';
 import useUserData from '../Hooks/useUserData';
 import Footer from './Footer';
 import Header from './Header';
+import './Perfil.css';
 
 interface UserData {
   id: string;
@@ -38,26 +38,34 @@ const Perfil: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const history = useHistory();
 
-
-
   const users = useUserData();
   const id = users?.id;
-  const userName= users?.userName;
-  const email=users?.email;
-  const rut=users?.rut;
-  const phone=users?.phone;
-  const region=users?.region;
+  const userName = users?.userName;
+  const email = users?.email;
+  const rut = users?.rut;
+  const phone = users?.phone;
+  const region = users?.region;
 
-  console.log('Datos Perfil: ',id,userName,email,rut,phone,region)
+  console.log('Datos Perfil: ', id, userName, email, rut, phone, region);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userID');
     history.replace('/iniciarsesion');
   };
+  const handleProfile = () =>{
+    history.push('/CrearPerfil');
+  }
+  const handleReportDownload = () =>{
+    const link = document.createElement('a');
+    link.href = '/Files/Reporte.pdf'; 
+    link.download = 'Reporte.pdf';
+    link.click();
+  }
 
   return (
     <IonPage>
-      <Header/>
+      <Header />
       <IonHeader>
         <IonToolbar>
           <IonTitle>Gryp</IonTitle>
@@ -70,45 +78,53 @@ const Perfil: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding">
+        <div className="profile-header">
+          <IonAvatar className="large-avatar">
+          </IonAvatar>
+          <img src="https://gravatar.com/avatar/dba6bae8c566f9d4041fb9cd9ada7741?d=identicon&f=y" alt="Avatar" />
+          <IonButton fill="clear" size="small">
+            <IonIcon icon={camera} />
+            
+          </IonButton>
+          <h2>Mi restaurante: {userName || 'Usuario'}</h2>
+          <p>{email}</p>
+        </div>
+
         <IonCard>
           <IonCardContent>
-            <div className="ion-text-center ion-padding">
-              <IonAvatar style={{ width: '100px', height: '100px', margin: '0 auto' }}>
-                <img src={'/assets/default-avatar.png'} alt="Profile" />
-              </IonAvatar>
-              <IonButton fill="clear" size="small">
-                <IonIcon icon={camera} />
-              </IonButton>
-            </div>
-
-            <IonItem>
+            <IonItem lines="full">
+              <IonIcon icon={mailOutline} slot="start" className="ion-icon-custom" />
               <IonLabel position="stacked">Email</IonLabel>
-              <IonInput value={email} type="email" />
+              <IonInput value={email} type="email" readonly />
             </IonItem>
 
-            <IonItem>
+            <IonItem lines="full">
+              <IonIcon icon={peopleCircle} slot="start" className="ion-icon-custom" />
               <IonLabel position="stacked">Nombre</IonLabel>
-              <IonInput value={userName}/>
+              <IonInput value={userName} readonly={!isEditing} />
             </IonItem>
 
-            <IonItem>
+            <IonItem lines="full">
+              <IonIcon icon={callOutline} slot="start" className="ion-icon-custom" />
               <IonLabel position="stacked">Teléfono</IonLabel>
-              <IonInput value={phone}/>
+              <IonInput value={phone} readonly={!isEditing} />
             </IonItem>
 
-            <IonItem>
+            <IonItem lines="full">
+              <IonIcon icon={compassOutline} slot="start" className="ion-icon-custom" />
               <IonLabel position="stacked">Ubicación</IonLabel>
-              <IonInput value={region}/>
+              <IonInput value={region} readonly={!isEditing} />
             </IonItem>
 
-            <IonItem>
+            <IonItem lines="full">
+              <IonIcon icon={idCardOutline} slot="start" className="ion-icon-custom" />
               <IonLabel position="stacked">RUT</IonLabel>
-              <IonInput value={rut}/>
+              <IonInput value={rut} readonly={!isEditing} />
             </IonItem>
 
             {isEditing && (
               <div className="ion-padding">
-                <IonButton expand="block" >
+                <IonButton expand="block">
                   Guardar Cambios
                 </IonButton>
               </div>
@@ -117,15 +133,25 @@ const Perfil: React.FC = () => {
         </IonCard>
 
         <div className="ion-padding">
-          <IonButton expand="block" color="danger" onClick={handleLogout}>
-            <IonIcon slot="start" icon={logOut} />
-            Cerrar Sesión
-          </IonButton>
+          <IonListHeader>Opciones</IonListHeader>
+          
+          <IonItem button onClick={handleLogout}>
+            <IonIcon icon={logOut} slot="start" />
+            <IonLabel>Cerrar Sesión</IonLabel>
+          </IonItem>
+          <IonItem button onClick={handleProfile}>
+            <IonIcon icon={peopleOutline} slot="start" />
+            <IonLabel>Gestionar Trabajadores</IonLabel>
+          </IonItem>
+          <IonItem button onClick={handleReportDownload}>
+            <IonIcon icon={documentOutline} slot="start" />
+            <IonLabel>Reportes Mensuales</IonLabel>
+          </IonItem>
         </div>
 
         <IonLoading isOpen={loading} message={'Cargando...'} spinner="circles" />
       </IonContent>
-      <Footer/>
+      <Footer />
     </IonPage>
   );
 };
