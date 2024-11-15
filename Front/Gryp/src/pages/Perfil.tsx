@@ -24,18 +24,10 @@ import Footer from './Footer';
 import Header from './Header';
 import './Perfil.css';
 
-interface UserData {
-  id: string;
-  userName: string;
-  rut: string;
-  email: string;
-  phone: string;
-  region: string;
-}
 
 const Perfil: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const history = useHistory();
 
   const users = useUserData();
@@ -92,16 +84,15 @@ const Perfil: React.FC = () => {
 
         <IonCard>
           <IonCardContent>
+          <IonItem lines="full">
+              <IonIcon icon={peopleCircle} slot="start" className="ion-icon-custom" />
+              <IonLabel position="stacked">Nombre</IonLabel>
+              <IonInput value={userName} readonly={!isEditing} />
+            </IonItem>
             <IonItem lines="full">
               <IonIcon icon={mailOutline} slot="start" className="ion-icon-custom" />
               <IonLabel position="stacked">Email</IonLabel>
               <IonInput value={email} type="email" readonly />
-            </IonItem>
-
-            <IonItem lines="full">
-              <IonIcon icon={peopleCircle} slot="start" className="ion-icon-custom" />
-              <IonLabel position="stacked">Nombre</IonLabel>
-              <IonInput value={userName} readonly={!isEditing} />
             </IonItem>
 
             <IonItem lines="full">

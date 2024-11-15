@@ -30,8 +30,6 @@ export const useUserData = () => {
         
         if (token) {
           console.log('Token almacenado:', token);
-          
-          // Usando la importación nombrada
           const decodedToken = jwtDecode<DecodedToken>(token);
           console.log('Token decodificado:', decodedToken);
           

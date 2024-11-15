@@ -37,7 +37,7 @@ const IniciarSesion: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validación
+
     if (!validateEmail(email)) {
       present({
         message: 'Por favor ingrese un email válido',
@@ -74,7 +74,6 @@ const IniciarSesion: React.FC = () => {
         throw new Error(data.message || 'Email o contraseña incorrectos');
       }
   
-      // Guardar el token en localStorage directamente
       localStorage.setItem('token',data.token);
   
       present({
@@ -83,7 +82,7 @@ const IniciarSesion: React.FC = () => {
         color: 'success'
       });
   
-      // Redirigir al home
+
       history.push('/Tab1');
       
     } catch (error) {
@@ -97,7 +96,7 @@ const IniciarSesion: React.FC = () => {
     }
   };
 
-  // Resto del JSX se mantiene igual, solo actualizamos el manejo de errores
+
   return (
     <IonPage>
       <IonHeader>
