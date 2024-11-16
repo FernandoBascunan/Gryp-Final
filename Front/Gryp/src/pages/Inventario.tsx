@@ -1,164 +1,162 @@
 import React, { useState, useEffect } from 'react';
 import {
-  IonContent,
   IonPage,
   IonHeader,
-  IonTitle,
   IonToolbar,
+  IonTitle,
+  IonContent,
   IonGrid,
   IonRow,
   IonCol,
+  IonSpinner,
+  IonAlert,
   IonButton,
-  IonModal,
-  IonInput,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonAlert
+  IonActionSheet,
 } from '@ionic/react';
 import Header from './Header';
 import Footer from './Footer';
-
-
-import inventarioData from '../Json/inventario.json';
+import useUserData from '../Hooks/useUserData';
+import axios from 'axios';
+import './Inventario.css';
 
 interface Producto {
-  id: number;
-  tipo: string;
-  ubicacion: string;
-  producto: string;
-  unidad: string;
-  cantidad: number;
+  productID: number;
+  productType: string;
+  loc: string;
+  productName: string;
+  unit: string;
+  amount: number;
 }
 
 const Inventario: React.FC = () => {
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
-  const [productoEdit, setProductoEdit] = useState<Producto | null>(null);
-  const [nuevoProducto, setNuevoProducto] = useState<Producto>({
-    id: 0,
-    tipo: '',
-    ubicacion: '',
-    producto: '',
-    unidad: '',
-    cantidad: 0
-  });
+  const id = useUserData()?.id;
+  const [inventario, setInventario] = useState<Producto[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
+  const [actionSheetVisible, setActionSheetVisible] = useState(false);
 
   useEffect(() => {
-    setProductos(inventarioData);
-  }, []);
+    const fetchInventario = async () => {
+      if (!id) return;
 
-  const agregarProducto = () => {
-    setProductos([...productos, { ...nuevoProducto, id: productos.length + 1 }]);
-    setShowModal(false);
-    limpiarCampos();
-  };
+      setLoading(true);
+      setError(null);
 
-  const eliminarProducto = (id: number) => {
-    setProductos(productos.filter(producto => producto.id !== id));
-    setShowAlert(false);
-  };
-  const editarProducto = (producto: Producto) => {
-    setProductoEdit(producto);
-    setNuevoProducto(producto);
-    setShowModal(true);
-  };
+      try {
+        const response = await axios.get(`http://localhost:3000/api/inventario/${id}`);
+        if (response.data.success) {
+          setInventario(response.data.storage);
+        } else {
+          setError('No se pudo cargar el inventario.');
+        }
+      } catch (err) {
+        console.error('Error al cargar el inventario:', err);
+        setError('Error al cargar el inventario.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const guardarCambios = () => {
-    setProductos(
-      productos.map(p => (p.id === nuevoProducto.id ? nuevoProducto : p))
-    );
-    setShowModal(false);
-    limpiarCampos();
-  };
+    fetchInventario();
+  }, [id]);
 
-  const limpiarCampos = () => {
-    setNuevoProducto({ id: 0, tipo: '', ubicacion: '', producto: '', unidad: '', cantidad: 0 });
-    setProductoEdit(null);
+  const handleRowClick = (producto: Producto) => {
+    setSelectedProduct(producto);
+    setActionSheetVisible(true);
   };
 
   return (
     <IonPage>
-      <Header/>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Gestión de Inventario</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-      <IonContent className="ion-padding">
-        <IonButton expand="block" onClick={() => setShowModal(true)}>Agregar Producto</IonButton>
+      <Header />
 
-        <IonGrid>
-          <IonRow>
-            <IonCol><strong>ID</strong></IonCol>
-            <IonCol><strong>Tipo de Producto</strong></IonCol>
-            <IonCol><strong>Ubicación</strong></IonCol>
-            <IonCol><strong>Producto</strong></IonCol>
-            <IonCol><strong>Unidad</strong></IonCol>
-            <IonCol><strong>Cantidad</strong></IonCol>
-            <IonCol><strong>Acciones</strong></IonCol>
-          </IonRow>
+      <IonContent>
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Inventario</IonTitle>
+          </IonToolbar>
+        </IonHeader>
 
-          {productos.map(producto => (
-            <IonRow key={producto.id}>
-              <IonCol>{producto.id}</IonCol>
-              <IonCol>{producto.tipo}</IonCol>
-              <IonCol>{producto.ubicacion}</IonCol>
-              <IonCol>{producto.producto}</IonCol>
-              <IonCol>{producto.unidad}</IonCol>
-              <IonCol>{producto.cantidad}</IonCol>
-              <IonCol>
-                <IonButton color="primary" size="small" onClick={() => editarProducto(producto)}>Editar</IonButton>
-                <IonButton color="danger" size="small" onClick={() => setShowAlert(true)}>Eliminar</IonButton>
+        <div className="table-container">
+          <IonButton expand="block" color="primary" className="add-button">
+            Agregar Producto
+          </IonButton>
 
-                <IonAlert
-                  isOpen={showAlert}
-                  onDidDismiss={() => setShowAlert(false)}
-                  header={'Eliminar Producto'}
-                  message={`¿Estás seguro de que deseas eliminar ${producto.producto}?`}
-                  buttons={[
-                    { text: 'Cancelar', role: 'cancel' },
-                    { text: 'Eliminar', handler: () => eliminarProducto(producto.id) }
-                  ]}
-                />
-              </IonCol>
-            </IonRow>
-          ))}
-        </IonGrid>
+          {loading && (
+            <div className="spinner-container">
+              <IonSpinner name="crescent" />
+            </div>
+          )}
 
-        <IonModal isOpen={showModal} onDidDismiss={() => setShowModal(false)}>
-          <IonContent>
-            <IonList>
-              <IonItem>
-                <IonLabel position="floating">Tipo de Producto</IonLabel>
-                <IonInput value={nuevoProducto.tipo} onIonChange={e => setNuevoProducto({ ...nuevoProducto, tipo: e.detail.value! })} />
-              </IonItem>
-              <IonItem>
-                <IonLabel position="floating">Ubicación</IonLabel>
-                <IonInput value={nuevoProducto.ubicacion} onIonChange={e => setNuevoProducto({ ...nuevoProducto, ubicacion: e.detail.value! })} />
-              </IonItem>
-              <IonItem>
-                <IonLabel position="floating">Producto</IonLabel>
-                <IonInput value={nuevoProducto.producto} onIonChange={e => setNuevoProducto({ ...nuevoProducto, producto: e.detail.value! })} />
-              </IonItem>
-              <IonItem>
-                <IonLabel position="floating">Unidad</IonLabel>
-                <IonInput value={nuevoProducto.unidad} onIonChange={e => setNuevoProducto({ ...nuevoProducto, unidad: e.detail.value! })} />
-              </IonItem>
-              <IonItem>
-                <IonLabel position="floating">Cantidad</IonLabel>
-                <IonInput type="number" value={nuevoProducto.cantidad} onIonChange={e => setNuevoProducto({ ...nuevoProducto, cantidad: parseInt(e.detail.value!, 10) || 0 })} />
-              </IonItem>
-            </IonList>
-            <IonButton expand="block" onClick={productoEdit ? guardarCambios : agregarProducto}>
-              {productoEdit ? 'Guardar Cambios' : 'Agregar Producto'}
-            </IonButton>
-            <IonButton expand="block" color="light" onClick={() => setShowModal(false)}>Cancelar</IonButton>
-          </IonContent>
-        </IonModal>
+          {error && (
+            <IonAlert
+              isOpen={!!error}
+              onDidDismiss={() => setError(null)}
+              header="Error"
+              message={error}
+              buttons={['OK']}
+            />
+          )}
+
+          {!loading && !error && (
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Tipo</th>
+                  <th>Ubicación</th>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                  <th>Unidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventario.map((producto) => (
+                  <tr
+                    key={producto.productID}
+                    className="clickable-row"
+                    onClick={() => handleRowClick(producto)}
+                  >
+                    <td>{producto.productID}</td>
+                    <td>{producto.productType}</td>
+                    <td>{producto.loc}</td>
+                    <td>{producto.productName}</td>
+                    <td>{producto.amount}</td>
+                    <td>{producto.unit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Action Sheet para Editar o Eliminar */}
+        <IonActionSheet
+          isOpen={actionSheetVisible}
+          onDidDismiss={() => setActionSheetVisible(false)}
+          buttons={[
+            {
+              text: 'Editar',
+              handler: () => {
+                console.log('Editar producto:', selectedProduct);
+              },
+            },
+            {
+              text: 'Eliminar',
+              role: 'destructive',
+              handler: () => {
+                console.log('Eliminar producto:', selectedProduct);
+              },
+            },
+            {
+              text: 'Cancelar',
+              role: 'cancel',
+            },
+          ]}
+        />
       </IonContent>
-      <Footer/>
+
+      <Footer />
     </IonPage>
   );
 };

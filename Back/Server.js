@@ -100,6 +100,19 @@ app.get('/api/profile/:userID', (req, res) => {
   });
 });
 
+app.get('/api/inventario/:userID',(req,res)=>{
+  const userID = req.params.userID;
+  const query= 'SELECT * from storage where userID = ?';
+  connection.query(query,[userID],(err,results)=>{
+      if(err){
+          return res.status(500).json({error:'Error en el servidor'})
+      }
+      if(results.length===0){
+          return res.status(404).json({error:'No existen datos para cargar'});
+      }
+      res.status(200).json({success: true, storage: results})
+  })
+});
 
 
 
