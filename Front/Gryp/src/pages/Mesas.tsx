@@ -20,79 +20,124 @@ import Footer from './Footer';
 import './Mesas.css';
 
 interface Mesa {
-  id: number;
-  tableStatus: number; // 0 or 1 for available or occupied
+  tableID: number;  // Cambiado de 'id' a 'tableID' para coincidir con la BD
+  tableStatus: number;
   userID: number | null;
+  selected: boolean;
 }
 
 const Mesas: React.FC = () => {
   const [mesas, setMesas] = useState<Mesa[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Cargar las mesas desde la base de datos
     fetch('http://localhost:3000/api/mesas')
       .then((response) => response.json())
-      .then((data) => setMesas(data))
-      .catch((error) => console.error('Error al cargar las mesas:', error));
+      .then((data) => {
+        if (Array.isArray(data.mesas)) {
+          // Agregar la propiedad 'selected' a cada mesa
+          const mesasConSelected = data.mesas.map((mesa: any) => ({
+            ...mesa,
+            selected: false
+          }));
+          setMesas(mesasConSelected);
+        } else {
+          console.error('Los datos de las mesas no son un array:', data);
+        }
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error al cargar las mesas:', error);
+        setLoading(false);
+      });
   }, []);
 
-  const handleToggleChange = (mesaId: number) => {
-    setMesas(mesas.map(mesa => {
-      if (mesa.id === mesaId) {
-        return {
-          ...mesa,
-          tableStatus: mesa.tableStatus === 1 ? 0 : 1 // Cambiar estado
-        };
-      }
-      return mesa;
-    }));
+  // Función corregida para manejar la selección única de mesas
+  const handleToggleChange = (tableID: number) => {
+    setMesas(prevMesas => prevMesas.map(mesa => ({
+      ...mesa,
+      selected: mesa.tableID === tableID ? !mesa.selected : false
+    })));
+  };
 
-    // Enviar la actualización al backend
-    fetch(`http://localhost:3000/api/mesas/${mesaId}`, {
+  // Función corregida para cambiar la disponibilidad
+  const cambiarDisponibilidad = (tableID: number) => {
+    const mesaActual = mesas.find(mesa => mesa.tableID === tableID);
+    if (!mesaActual) return;
+
+    const nuevoEstado = mesaActual.tableStatus === 1 ? 0 : 1;
+
+    // Actualizar el estado local
+    setMesas(prevMesas => prevMesas.map(mesa => 
+      mesa.tableID === tableID 
+        ? { ...mesa, tableStatus: nuevoEstado }
+        : mesa
+    ));
+
+    // Enviar actualización al servidor
+    fetch(`http://localhost:3000/api/mesas/${tableID}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        tableStatus: mesas.find(mesa => mesa.id === mesaId)?.tableStatus === 1 ? 0 : 1
+        tableStatus: nuevoEstado
       }),
-    }).catch((error) => console.error('Error al actualizar la mesa:', error));
+    })
+      .then(response => response.json())
+      .then(data => console.log('Mesa actualizada:', data))
+      .catch(error => console.error('Error al actualizar mesa:', error));
   };
 
   const agregarMesa = () => {
+    const nuevaMesa = {
+      tableStatus: 1,
+      userID: null,
+      selected: false
+    };
+
     fetch('http://localhost:3000/api/mesas', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        tableStatus: 1,  // Disponible por defecto
-        userID: 1, // Asignado al usuario 1
-      }),
+      body: JSON.stringify(nuevaMesa),
     })
-      .then((response) => response.json())
-      .then((newMesa) => setMesas([...mesas, newMesa]))
-      .catch((error) => console.error('Error al agregar una mesa:', error));
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Agregar la nueva mesa al estado con el ID generado por la base de datos
+          const mesaCompleta = {
+            ...nuevaMesa,
+            tableID: data.mesaId
+          };
+          setMesas(prevMesas => [...prevMesas, mesaCompleta]);
+        }
+      })
+      .catch(error => console.error('Error al agregar mesa:', error));
   };
 
   const eliminarMesa = () => {
-    const mesaSeleccionada = mesas.find(mesa => mesa.userID === 1); // Solo eliminar mesas del usuario actual
+    const mesaSeleccionada = mesas.find(mesa => mesa.selected);
     if (mesaSeleccionada) {
-      fetch(`http://localhost:3000/api/mesas/${mesaSeleccionada.id}`, {
+      fetch(`http://localhost:3000/api/mesas/${mesaSeleccionada.tableID}`, {
         method: 'DELETE',
       })
-        .then(() => {
-          setMesas(mesas.filter(mesa => mesa.id !== mesaSeleccionada.id));
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            setMesas(prevMesas => prevMesas.filter(mesa => mesa.tableID !== mesaSeleccionada.tableID));
+          }
         })
-        .catch((error) => console.error('Error al eliminar la mesa:', error));
+        .catch(error => console.error('Error al eliminar mesa:', error));
     }
   };
 
-  const hayMesaSeleccionada = mesas.some(mesa => mesa.userID === 1);
+  const hayMesaSeleccionada = mesas.some(mesa => mesa.selected);
 
   return (
     <IonPage>
-      <Header />
+      <Header/>
       <IonContent>
         <IonHeader>
           <IonToolbar>
@@ -100,56 +145,62 @@ const Mesas: React.FC = () => {
           </IonToolbar>
         </IonHeader>
 
-        <div className="acciones">
-          <IonButton 
-            expand="block"
-            onClick={agregarMesa}
-            className="boton-accion"
-          >
-            <IonIcon icon={add} slot="start" />
-            Agregar Mesa
-          </IonButton>
-          
-          <IonButton 
-            expand="block"
-            onClick={eliminarMesa}
-            className="boton-accion"
-            color="danger"
-            disabled={!hayMesaSeleccionada}
-          >
-            <IonIcon icon={remove} slot="start" />
-            Eliminar Mesa 
-          </IonButton>
-        </div>
+        {loading ? (
+          <div>Cargando...</div>
+        ) : (
+          <div>
+            <div className="acciones">
+              <IonButton 
+                expand="block"
+                onClick={agregarMesa}
+                className="boton-accion"
+              >
+                <IonIcon icon={add} slot="start" />
+                Agregar Mesa
+              </IonButton>
 
-        <IonGrid>
-          <IonRow>
-            {mesas.map((mesa) => (
-              <IonCol size="6" sizeSm="4" sizeMd="3" key={mesa.id}>
-                <div 
-                  className={`mesa ${mesa.tableStatus === 1 ? 'desocupada' : 'ocupada'}`}
-                  onClick={() => handleToggleChange(mesa.id)}
-                >
-                  <span className="numero-mesa">Mesa {mesa.id}</span>
-                  {mesa.tableStatus === 1 ? (
-                    <span className="icono-seleccionado">✓</span>
-                  ) : (
-                    <span className="icono-seleccionado">×</span>
-                  )}
-                </div>
-                <IonItem lines="none">
-                  <IonLabel>Disponibilidad</IonLabel>
-                  <IonToggle 
-                    checked={mesa.tableStatus === 1} 
-                    onIonChange={() => handleToggleChange(mesa.id)}
-                  />
-                </IonItem>
-              </IonCol>
-            ))}
-          </IonRow>
-        </IonGrid>
+              <IonButton 
+                expand="block"
+                onClick={eliminarMesa}
+                className="boton-accion"
+                color="danger"
+                disabled={!hayMesaSeleccionada}
+              >
+                <IonIcon icon={remove} slot="start" />
+                Eliminar Mesa
+              </IonButton>
+            </div>
+
+            <IonGrid>
+              <IonRow>
+                {mesas.map((mesa) => (
+                  <IonCol size="6" sizeSm="4" sizeMd="3" key={mesa.tableID}>
+                    <div 
+                      className={`mesa ${mesa.selected ? 'seleccionada' : ''} ${mesa.tableStatus === 1 ? 'desocupada' : 'ocupada'}`}
+                      onClick={() => handleToggleChange(mesa.tableID)}
+                    >
+                      <span className="numero-mesa">Mesa {mesa.tableID}</span>
+                      {mesa.selected && (
+                        <span className="icono-seleccionado">
+                          {mesa.tableStatus === 1 ? '✓' : '×'}
+                        </span>
+                      )}
+                    </div>
+                    <IonItem lines="none">
+                      <IonLabel>Disponibilidad</IonLabel>
+                      <IonToggle 
+                        checked={mesa.tableStatus === 1}
+                        onIonChange={() => cambiarDisponibilidad(mesa.tableID)}
+                      />
+                    </IonItem>
+                  </IonCol>
+                ))}
+              </IonRow>
+            </IonGrid>
+          </div>
+        )}
       </IonContent>
-      <Footer />
+      <Footer/>
     </IonPage>
   );
 };
