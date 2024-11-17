@@ -49,11 +49,8 @@ app.post('/api/users', async (req, res) => {
 // Login
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
-  console.log('\n--- Inicio de proceso de login ---');
-  console.log('Email recibido:', email);
 
   if (!email || !password) {
-    console.log('Error: Faltan credenciales');
     return res.status(400).json({ error: 'Email y contraseña son requeridos' });
   }
 
@@ -61,41 +58,31 @@ app.post('/api/login', async (req, res) => {
 
   connection.query(query, [email], async (err, results) => {
     if (err) {
-      console.error('Error en consulta SQL:', err);
       return res.status(500).json({ error: 'Error en el servidor' });
     }
 
     if (results.length === 0) {
-      console.log('Usuario no encontrado');
       return res.status(401).json({ error: 'Email o contraseña incorrectos' });
     }
 
     const user = results[0];
-    console.log('Usuario encontrado:', {
-      id: user.userID,
-      email: user.email,
-      storedHash: user.password
-    });
-
     try {
-      const testHash = await bcrypt.hash(password, 10);
-      console.log('Hash de prueba generado:', testHash);
       const isPasswordValid = await bcrypt.compare(password, user.password);
-      console.log('Contraseña ingresada:', password);
-      console.log('Hash almacenado:', user.password);
-      console.log('¿Contraseña válida?:', isPasswordValid);
-
       if (!isPasswordValid) {
-        console.log('Validación de contraseña fallida');
         return res.status(401).json({ error: 'Email o contraseña incorrectos' });
       }
       const token = jwt.sign(
-        { id: user.userID, email: user.email },
+        { 
+          id: user.userID, 
+          email: user.email, 
+          userName: user.userName, 
+          phone: user.phone, 
+          region: user.region, 
+          rut: user.rut 
+        },
         process.env.JWT_SECRET || 'tu_clave_secreta_temporal',
         { expiresIn: '2h' }
       );
-
-      console.log('Login exitoso - Token generado');
       const { password: _, ...userWithoutPassword } = user;
       res.json({
         success: true,
@@ -103,12 +90,12 @@ app.post('/api/login', async (req, res) => {
         user: userWithoutPassword
       });
     } catch (error) {
-      console.error('Error durante la verificación:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+      res.status(500).json({ error: 'Error durante la verificación' });
     }
   });
 });
 
+// Obtener perfil de usuario
 app.get('/api/profile/:userID', (req, res) => {
   const userID = req.params.userID;
   const query = 'SELECT userName, rut, email, phone, region FROM users WHERE userID = ?';
@@ -123,9 +110,74 @@ app.get('/api/profile/:userID', (req, res) => {
   });
 });
 
+// Obtener todas las mesas
+app.get('/api/mesas', (req, res) => {
+  const query = 'SELECT * FROM tables'; // Suponiendo que la tabla de mesas se llama "tables"
+  
+  connection.query(query, (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    res.status(200).json({ success: true, mesas: results });
+  });
+});
+
+app.put('/api/mesas/:id', (req, res) => {
+  const mesaId = req.params.id;
+  const { tableStatus } = req.body;
+
+  // Asegúrate de que tableStatus sea 0 o 1
+  if (tableStatus !== 0 && tableStatus !== 1) {
+    return res.status(400).json({ error: 'El valor de tableStatus debe ser 0 o 1' });
+  }
+
+  const query = 'UPDATE tables SET tableStatus = ? WHERE tableID = ?';
+  connection.query(query, [tableStatus, mesaId], (err, result) => {
+    if (err) {
+      console.error('Error al actualizar la disponibilidad de la mesa:', err);
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Mesa no encontrada' });
+    }
+    res.status(200).json({ success: true, message: 'Disponibilidad de la mesa actualizada' });
+  });
+});
+
+
+// Agregar una nueva mesa
+app.post('/api/mesas', (req, res) => {
+  const { tableStatus, userID } = req.body; // Asumiendo que los valores de tableStatus (1 o 0) se pasan desde el cuerpo
+
+  const query = 'INSERT INTO tables (tableStatus, userID) VALUES (?, ?)';
+  connection.query(query, [tableStatus || 1, userID || null], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    res.status(201).json({ success: true, message: 'Mesa agregada con éxito', mesaId: result.insertId });
+  });
+});
+
+// Eliminar una mesa
+app.delete('/api/mesas/:id', (req, res) => {
+  const mesaId = req.params.id;
+
+  const query = 'DELETE FROM tables WHERE tableID = ?';
+  connection.query(query, [mesaId], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Mesa no encontrada' });
+    }
+    res.status(200).json({ success: true, message: 'Mesa eliminada' });
+  });
+});
+
+// Obtener inventario del usuario
 app.get('/api/inventario/:userID', (req, res) => {
   const userID = req.params.userID;
-  const query = 'SELECT * from storage where userID = ?';
+  const query = 'SELECT * FROM storage WHERE userID = ?';
   connection.query(query, [userID], (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Error en el servidor' });

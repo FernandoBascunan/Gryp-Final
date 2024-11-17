@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   IonContent, 
   IonGrid, 
@@ -21,68 +21,78 @@ import './Mesas.css';
 
 interface Mesa {
   id: number;
-  disponible: boolean;
-  selected: boolean;
+  tableStatus: number; // 0 or 1 for available or occupied
+  userID: number | null;
 }
 
 const Mesas: React.FC = () => {
-  const [mesas, setMesas] = useState<Mesa[]>(
-    Array.from({ length: 9 }, (_, index) => ({
-      id: index + 1,
-      disponible: true,
-      selected: false,
-    }))
-  );
+  const [mesas, setMesas] = useState<Mesa[]>([]);
+
+  useEffect(() => {
+    // Cargar las mesas desde la base de datos
+    fetch('http://localhost:3000/api/mesas')
+      .then((response) => response.json())
+      .then((data) => setMesas(data))
+      .catch((error) => console.error('Error al cargar las mesas:', error));
+  }, []);
 
   const handleToggleChange = (mesaId: number) => {
     setMesas(mesas.map(mesa => {
       if (mesa.id === mesaId) {
         return {
           ...mesa,
-          selected: !mesa.selected
-        };
-      }
-      return {
-        ...mesa,
-        selected: false
-      };
-    }));
-  };
-
-  const cambiarDisponibilidad = (mesaId: number) => {
-    setMesas(mesas.map(mesa => {
-      if (mesa.id === mesaId) {
-        return {
-          ...mesa,
-          disponible: !mesa.disponible,
-          selected: false
+          tableStatus: mesa.tableStatus === 1 ? 0 : 1 // Cambiar estado
         };
       }
       return mesa;
     }));
+
+    // Enviar la actualización al backend
+    fetch(`http://localhost:3000/api/mesas/${mesaId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        tableStatus: mesas.find(mesa => mesa.id === mesaId)?.tableStatus === 1 ? 0 : 1
+      }),
+    }).catch((error) => console.error('Error al actualizar la mesa:', error));
   };
 
   const agregarMesa = () => {
-    const newId = mesas.length > 0 ? Math.max(...mesas.map(m => m.id)) + 1 : 1;
-    setMesas([...mesas, {
-      id: newId,
-      disponible: true,
-      selected: false
-    }]);
+    fetch('http://localhost:3000/api/mesas', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        tableStatus: 1,  // Disponible por defecto
+        userID: 1, // Asignado al usuario 1
+      }),
+    })
+      .then((response) => response.json())
+      .then((newMesa) => setMesas([...mesas, newMesa]))
+      .catch((error) => console.error('Error al agregar una mesa:', error));
   };
 
   const eliminarMesa = () => {
-    const mesaSeleccionada = mesas.find(mesa => mesa.selected);
+    const mesaSeleccionada = mesas.find(mesa => mesa.userID === 1); // Solo eliminar mesas del usuario actual
     if (mesaSeleccionada) {
-      setMesas(mesas.filter(mesa => mesa.id !== mesaSeleccionada.id));
+      fetch(`http://localhost:3000/api/mesas/${mesaSeleccionada.id}`, {
+        method: 'DELETE',
+      })
+        .then(() => {
+          setMesas(mesas.filter(mesa => mesa.id !== mesaSeleccionada.id));
+        })
+        .catch((error) => console.error('Error al eliminar la mesa:', error));
     }
   };
 
-  const hayMesaSeleccionada = mesas.some(mesa => mesa.selected);
+  const hayMesaSeleccionada = mesas.some(mesa => mesa.userID === 1);
 
   return (
     <IonPage>
-      <Header/>
+      <Header />
       <IonContent>
         <IonHeader>
           <IonToolbar>
@@ -117,23 +127,21 @@ const Mesas: React.FC = () => {
             {mesas.map((mesa) => (
               <IonCol size="6" sizeSm="4" sizeMd="3" key={mesa.id}>
                 <div 
-                  className={`mesa ${mesa.selected ? 'seleccionada' : ''} ${
-                    mesa.disponible ? 'desocupada' : 'ocupada'
-                  }`}
+                  className={`mesa ${mesa.tableStatus === 1 ? 'desocupada' : 'ocupada'}`}
                   onClick={() => handleToggleChange(mesa.id)}
                 >
                   <span className="numero-mesa">Mesa {mesa.id}</span>
-                  {mesa.selected && (
-                    <span className="icono-seleccionado">
-                      {mesa.disponible ? '✓' : '×'}
-                    </span>
+                  {mesa.tableStatus === 1 ? (
+                    <span className="icono-seleccionado">✓</span>
+                  ) : (
+                    <span className="icono-seleccionado">×</span>
                   )}
                 </div>
                 <IonItem lines="none">
                   <IonLabel>Disponibilidad</IonLabel>
                   <IonToggle 
-                    checked={mesa.disponible} 
-                    onIonChange={() => cambiarDisponibilidad(mesa.id)}
+                    checked={mesa.tableStatus === 1} 
+                    onIonChange={() => handleToggleChange(mesa.id)}
                   />
                 </IonItem>
               </IonCol>
@@ -141,7 +149,7 @@ const Mesas: React.FC = () => {
           </IonRow>
         </IonGrid>
       </IonContent>
-      <Footer/>
+      <Footer />
     </IonPage>
   );
 };
