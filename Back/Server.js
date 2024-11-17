@@ -174,6 +174,267 @@ app.delete('/api/mesas/:id', (req, res) => {
   });
 });
 
+// Obtener todas las órdenes con sus detalles
+app.get('/api/orders', (req, res) => {
+  const query = `
+    SELECT 
+      o.orderID,
+      o.waiterID,
+      o.tableID,
+      o.userID,
+      w.waiterName,
+      GROUP_CONCAT(DISTINCT m.dishName) as dishes
+    FROM orders o
+    INNER JOIN waiter w ON o.waiterID = w.waiterID
+    INNER JOIN tables t ON o.tableID = t.tableID
+    LEFT JOIN orderContent oc ON o.orderID = oc.orderID
+    LEFT JOIN menu m ON oc.menuID = m.menuID
+    WHERE m.dishStatus = true
+    GROUP BY o.orderID
+    ORDER BY o.orderID DESC
+  `;
+
+  connection.query(query, (err, results) => {
+    if (err) {
+      console.error('Error al obtener órdenes:', err);
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    
+    // Formatear los platos como array
+    const formattedResults = results.map(order => ({
+      ...order,
+      dishes: order.dishes ? order.dishes.split(',') : []
+    }));
+
+    res.json({ success: true, orders: formattedResults });
+  });
+});
+
+// Crear nueva orden
+app.post('/api/orders', (req, res) => {
+  const { waiterID, tableID, userID, menuItems } = req.body;
+  
+  // Validaciones
+  if (!waiterID || !tableID || !userID || !Array.isArray(menuItems)) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Datos incompletos o inválidos' 
+    });
+  }
+
+  connection.beginTransaction(err => {
+    if (err) {
+      return res.status(500).json({ error: 'Error al iniciar la transacción' });
+    }
+
+    // Primero insertamos la orden principal
+    const orderQuery = `
+      INSERT INTO orders (waiterID, tableID, userID) 
+      VALUES (?, ?, ?)
+    `;
+
+    connection.query(orderQuery, [waiterID, tableID, userID], (err, result) => {
+      if (err) {
+        return connection.rollback(() => {
+          res.status(500).json({ error: 'Error al crear la orden' });
+        });
+      }
+
+      const orderID = result.insertId;
+
+      // Si no hay items del menú, completamos la transacción
+      if (menuItems.length === 0) {
+        return connection.commit(err => {
+          if (err) {
+            return connection.rollback(() => {
+              res.status(500).json({ error: 'Error al confirmar la transacción' });
+            });
+          }
+          res.json({ success: true, orderID });
+        });
+      }
+
+      // Preparamos la inserción de los items del menú
+      const itemsQuery = `
+        INSERT INTO orderContent (orderID, menuID, userID) 
+        VALUES ?
+      `;
+      
+      const itemValues = menuItems.map(menuID => [orderID, menuID, userID]);
+
+      connection.query(itemsQuery, [itemValues], (err) => {
+        if (err) {
+          return connection.rollback(() => {
+            res.status(500).json({ error: 'Error al agregar los platos' });
+          });
+        }
+
+        connection.commit(err => {
+          if (err) {
+            return connection.rollback(() => {
+              res.status(500).json({ error: 'Error al confirmar la transacción' });
+            });
+          }
+          res.json({ success: true, orderID });
+        });
+      });
+    });
+  });
+});
+
+// Actualizar orden
+app.put('/api/orders/:orderID', (req, res) => {
+  const orderID = req.params.orderID;
+  const { waiterID, tableID, userID, menuItems } = req.body;
+
+  // Validaciones
+  if (!waiterID || !tableID || !userID || !Array.isArray(menuItems)) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Datos incompletos o inválidos' 
+    });
+  }
+
+  connection.beginTransaction(err => {
+    if (err) {
+      return res.status(500).json({ error: 'Error al iniciar la transacción' });
+    }
+
+    // Actualizamos la información principal de la orden
+    const orderQuery = `
+      UPDATE orders 
+      SET waiterID = ?, tableID = ?, userID = ? 
+      WHERE orderID = ?
+    `;
+
+    connection.query(orderQuery, [waiterID, tableID, userID, orderID], (err) => {
+      if (err) {
+        return connection.rollback(() => {
+          res.status(500).json({ error: 'Error al actualizar la orden' });
+        });
+      }
+
+      // Eliminamos los items anteriores
+      const deleteQuery = `
+        DELETE FROM orderContent 
+        WHERE orderID = ?
+      `;
+
+      connection.query(deleteQuery, [orderID], (err) => {
+        if (err) {
+          return connection.rollback(() => {
+            res.status(500).json({ error: 'Error al actualizar los platos' });
+          });
+        }
+
+        // Si no hay nuevos items, completamos la transacción
+        if (menuItems.length === 0) {
+          return connection.commit(err => {
+            if (err) {
+              return connection.rollback(() => {
+                res.status(500).json({ error: 'Error al confirmar la transacción' });
+              });
+            }
+            res.json({ success: true, message: 'Orden actualizada con éxito' });
+          });
+        }
+
+        // Insertamos los nuevos items
+        const itemsQuery = `
+          INSERT INTO orderContent (orderID, menuID, userID) 
+          VALUES ?
+        `;
+        
+        const itemValues = menuItems.map(menuID => [orderID, menuID, userID]);
+
+        connection.query(itemsQuery, [itemValues], (err) => {
+          if (err) {
+            return connection.rollback(() => {
+              res.status(500).json({ error: 'Error al agregar los platos' });
+            });
+          }
+
+          connection.commit(err => {
+            if (err) {
+              return connection.rollback(() => {
+                res.status(500).json({ error: 'Error al confirmar la transacción' });
+              });
+            }
+            res.json({ success: true, message: 'Orden actualizada con éxito' });
+          });
+        });
+      });
+    });
+  });
+});
+
+// Eliminar orden
+app.delete('/api/orders/:orderID', (req, res) => {
+  const orderID = req.params.orderID;
+
+  // La eliminación en cascada manejará la eliminación de orderContent
+  const query = 'DELETE FROM orders WHERE orderID = ?';
+  
+  connection.query(query, [orderID], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error al eliminar la orden' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Orden no encontrada' });
+    }
+    res.json({ success: true, message: 'Orden eliminada con éxito' });
+  });
+});
+
+// Obtener menú para el desplegable
+app.get('/api/menu', (req, res) => {
+  const query = `
+    SELECT menuID, dishName, dishStatus
+    FROM menu 
+    WHERE dishStatus = true
+    ORDER BY dishName
+  `;
+
+  connection.query(query, (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error al obtener el menú' });
+    }
+    res.json({ success: true, menu: results });
+  });
+});
+
+// Obtener meseros para el desplegable
+app.get('/api/waiters', (req, res) => {
+  const query = `
+    SELECT waiterID, waiterName 
+    FROM waiter 
+    ORDER BY waiterName
+  `;
+
+  connection.query(query, (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error al obtener los meseros' });
+    }
+    res.json({ success: true, waiters: results });
+  });
+});
+
+// Obtener mesas para el desplegable
+app.get('/api/tables', (req, res) => {
+  const query = `
+    SELECT tableID, tableNumber 
+    FROM tables 
+    ORDER BY tableNumber
+  `;
+
+  connection.query(query, (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error al obtener las mesas' });
+    }
+    res.json({ success: true, tables: results });
+  });
+});
+
 // Obtener inventario del usuario
 app.get('/api/inventario/:userID', (req, res) => {
   const userID = req.params.userID;

@@ -1,60 +1,166 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   IonContent, IonHeader, IonPage, IonTitle, IonToolbar, 
-  IonButton, IonInput, IonTextarea, IonModal, IonActionSheet,
+  IonButton, IonInput, IonModal, IonActionSheet,
   IonCard, IonCardHeader, IonCardSubtitle, IonCardTitle, IonCardContent,
-  IonItem, IonLabel
+  IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonLoading
 } from '@ionic/react';
-import '../pages/Orden.css'; 
+import '../pages/Orden.css';
 import Footer from './Footer';
 import Header from './Header';
 
+interface Order {
+  orderID: number;
+  waiterID: number;
+  tableID: number;
+  userID: number;
+  waiterName?: string;
+  tableNumber?: number;
+  items?: string;
+}
 
+interface MenuItem {
+  menuID: number;
+  dishName: string;
+}
 
-interface Orden {
-  id: number;
-  cajero: string;
-  pedido: string;
-  mesa: number;
+interface Waiter {
+  waiterID: number;
+  waiterName: string;
 }
 
 const Orden: React.FC = () => {
-  const [ordenes, setOrdenes] = useState<Orden[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [currentOrden, setCurrentOrden] = useState<Orden>({ id: 0, cajero: '', pedido: '', mesa: 0 });
+  const [currentOrder, setCurrentOrder] = useState<Order>({
+    orderID: 0,
+    waiterID: 0,
+    tableID: 0,
+    userID: 1,
+    items: ''
+  });
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedOrden, setSelectedOrden] = useState<Orden | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showActionSheet, setShowActionSheet] = useState(false);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [waiters, setWaiters] = useState<Waiter[]>([]);
+  const [tables, setTables] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
 
-  const handleAddOrden = () => {
-    setIsEditing(false);
-    setCurrentOrden({ id: ordenes.length + 1, cajero: '', pedido: '', mesa: 0 });
-    setShowModal(true);
-  };
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const handleEditOrden = (orden: Orden) => {
-    setIsEditing(true);
-    setCurrentOrden(orden);
-    setShowModal(true);
-    setShowActionSheet(false);
-  };
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Obtener órdenes
+      const ordersRes = await fetch('http://localhost:3000/api/orders');
+      const ordersData = await ordersRes.json();
+      if (ordersData.success) setOrders(ordersData.orders);
 
-  const handleDeleteOrden = (id: number) => {
-    setOrdenes(ordenes.filter(orden => orden.id !== id));
-    setShowActionSheet(false);
-  };
+      // Obtener menú
+      const menuRes = await fetch('http://localhost:3000/api/menu');
+      const menuData = await menuRes.json();
+      if (menuData.success) setMenuItems(menuData.menu);
 
-  const handleSaveOrden = () => {
-    if (isEditing) {
-      setOrdenes(ordenes.map(orden => orden.id === currentOrden.id ? currentOrden : orden));
-    } else {
-      setOrdenes([...ordenes, currentOrden]);
+      // Obtener meseros
+      const waitersRes = await fetch('http://localhost:3000/api/waiters');
+      const waitersData = await waitersRes.json();
+      if (waitersData.success) setWaiters(waitersData.waiters);
+
+      // Obtener mesas
+      const tablesRes = await fetch('http://localhost:3000/api/mesas');
+      const tablesData = await tablesRes.json();
+      if (tablesData.success) setTables(tablesData.mesas);
+    } catch (error) {
+      console.error('Error al cargar datos:', error);
     }
-    setShowModal(false);
+    setLoading(false);
   };
 
-  const handleSelectOrden = (orden: Orden) => {
-    setSelectedOrden(orden);
+  const handleAddOrder = () => {
+    setIsEditing(false);
+    setCurrentOrder({
+      orderID: 0,
+      waiterID: 0,
+      tableID: 0,
+      userID: 1,
+      items: ''
+    });
+    setSelectedItems([]);
+    setShowModal(true);
+  };
+
+  const handleEditOrder = (order: Order) => {
+    setIsEditing(true);
+    setCurrentOrder(order);
+    setSelectedItems(order.items?.split(',').map(item => {
+      const menuItem = menuItems.find(mi => mi.dishName === item.trim());
+      return menuItem ? menuItem.menuID : 0;
+    }).filter(id => id !== 0) || []);
+    setShowModal(true);
+    setShowActionSheet(false);
+  };
+
+  const handleDeleteOrder = async (orderID: number) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/orders/${orderID}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+      if (data.success) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error al eliminar orden:', error);
+    }
+    setShowActionSheet(false);
+  };
+
+  const handleSaveOrder = async () => {
+    if (!currentOrder.waiterID || !currentOrder.tableID || selectedItems.length === 0) {
+      // Show an alert here indicating missing fields if necessary
+      return;
+    }
+  
+    try {
+      const method = isEditing ? 'PUT' : 'POST';
+      const url = isEditing 
+        ? `http://localhost:3000/api/orders/${currentOrder.orderID}`
+        : 'http://localhost:3000/api/orders';
+  
+      // Prepare the payload
+      const payload = {
+        waiterID: currentOrder.waiterID,
+        tableID: currentOrder.tableID,
+        userID: currentOrder.userID,
+        menuItems: selectedItems, // Sending IDs as an array
+      };
+  
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      const data = await response.json();
+      if (data.success) {
+        fetchData();
+        setShowModal(false);
+      } else {
+        console.error('Server error:', data.error);
+      }
+    } catch (error) {
+      console.error('Error al guardar orden:', error);
+    }
+  };
+  
+  const handleSelectOrder = (order: Order) => {
+    setSelectedOrder(order);
     setShowActionSheet(true);
   };
 
@@ -67,55 +173,93 @@ const Orden: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent>
-        <IonButton expand="block" onClick={handleAddOrden}>Agregar Orden</IonButton>
+        <IonLoading isOpen={loading} message="Cargando..." />
+        
+        <IonButton expand="block" onClick={handleAddOrder} className="ion-margin">
+          Agregar Orden
+        </IonButton>
+
         <div className="ordenes-container">
-          {ordenes.map((orden) => (
-            <IonCard key={orden.id} className="orden-card" onClick={() => handleSelectOrden(orden)}>
+          {orders.map((order) => (
+            <IonCard key={order.orderID} className="orden-card" onClick={() => handleSelectOrder(order)}>
               <IonCardHeader>
-                <div className="orden-id">ID: {orden.id}</div>
-                <IonCardSubtitle className="orden-cajero">{orden.cajero}</IonCardSubtitle>
-                <IonCardTitle className="orden-pedido">{orden.pedido}</IonCardTitle>
+                <div className="orden-id">Orden #{order.orderID}</div>
+                <IonCardSubtitle>Mesero: {order.waiterName}</IonCardSubtitle>
+                <IonCardTitle>Mesa: {order.tableID || 'Sin asignar'}</IonCardTitle>
               </IonCardHeader>
               <IonCardContent>
-                <div className="orden-mesa">Mesa: {orden.mesa}</div>
-              </IonCardContent>
-            </IonCard>
+  <div className="orden-items">
+    Items: {order.items
+      ? order.items
+          .split(',')
+          .map(menuID => {
+            const menuItem = menuItems.find(mi => mi.menuID === parseInt(menuID.trim(), 10));
+            return menuItem ? menuItem.dishName : `ID ${menuID} no encontrado`;
+          })
+          .join(', ')
+      : 'No items'}
+  </div>
+</IonCardContent>
+          </IonCard>          
           ))}
         </div>
 
-        <IonModal isOpen={showModal}>
+        <IonModal isOpen={showModal} onDidDismiss={() => setShowModal(false)}>
           <IonHeader>
             <IonToolbar>
               <IonTitle>{isEditing ? 'Editar Orden' : 'Nueva Orden'}</IonTitle>
+              <IonButton slot="end" onClick={() => setShowModal(false)}>Cerrar</IonButton>
             </IonToolbar>
           </IonHeader>
           <IonContent>
-            <IonItem>
-              <IonLabel position="floating">Cajero</IonLabel>
-              <IonInput 
-                value={currentOrden.cajero} 
-                onIonChange={e => setCurrentOrden({...currentOrden, cajero: e.detail.value!})} 
-              />
-            </IonItem>
-            <IonItem>
-              <IonLabel position="floating">Pedido</IonLabel>
-              <IonTextarea 
-                value={currentOrden.pedido} 
-                onIonChange={e => setCurrentOrden({...currentOrden, pedido: e.detail.value!})}
-                rows={6}
-                className="pedido-textarea"
-              />
-            </IonItem>
-            <IonItem>
-              <IonLabel position="floating">Mesa</IonLabel>
-              <IonInput 
-                type="number" 
-                value={currentOrden.mesa} 
-                onIonChange={e => setCurrentOrden({...currentOrden, mesa: parseInt(e.detail.value!, 10)})} 
-              />
-            </IonItem>
-            <IonButton expand="block" onClick={handleSaveOrden}>Guardar</IonButton>
-            <IonButton expand="block" color="medium" onClick={() => setShowModal(false)}>Cancelar</IonButton>
+            <IonList>
+              <IonItem>
+                <IonLabel>Mesero</IonLabel>
+                <IonSelect 
+                  value={currentOrder.waiterID}
+                  onIonChange={e => setCurrentOrder({...currentOrder, waiterID: e.detail.value})}
+                >
+                  {waiters.map(waiter => (
+                    <IonSelectOption key={waiter.waiterID} value={waiter.waiterID}>
+                      {waiter.waiterName}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>Mesa</IonLabel>
+                <IonSelect
+                  value={currentOrder.tableID}
+                  onIonChange={e => setCurrentOrder({...currentOrder, tableID: e.detail.value})}
+                >
+                  {tables.map(table => (
+                    <IonSelectOption key={table.tableID} value={table.tableID}>
+                      Mesa {table.tableID}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+
+              <IonItem>
+                <IonLabel>Items del Menú</IonLabel>
+                <IonSelect
+                  multiple={true}
+                  value={selectedItems}
+                  onIonChange={e => setSelectedItems(e.detail.value)}
+                >
+                  {menuItems.map(item => (
+                    <IonSelectOption key={item.menuID} value={item.menuID}>
+                      {item.dishName}
+                    </IonSelectOption>
+                  ))}
+                </IonSelect>
+              </IonItem>
+            </IonList>
+
+            <IonButton expand="block" onClick={handleSaveOrder} className="ion-margin">
+              {isEditing ? 'Actualizar Orden' : 'Crear Orden'}
+            </IonButton>
           </IonContent>
         </IonModal>
 
@@ -126,14 +270,14 @@ const Orden: React.FC = () => {
             {
               text: 'Editar',
               handler: () => {
-                if (selectedOrden) handleEditOrden(selectedOrden);
+                if (selectedOrder) handleEditOrder(selectedOrder);
               }
             },
             {
               text: 'Eliminar',
               role: 'destructive',
               handler: () => {
-                if (selectedOrden) handleDeleteOrden(selectedOrden.id);
+                if (selectedOrder) handleDeleteOrder(selectedOrder.orderID);
               }
             },
             {
@@ -143,7 +287,7 @@ const Orden: React.FC = () => {
           ]}
         />
       </IonContent>
-      <Footer/>
+      <Footer />
     </IonPage>
   );
 };
