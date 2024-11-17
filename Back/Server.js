@@ -31,7 +31,7 @@ app.post('/api/users', async (req, res) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-
+    
     const query = 'INSERT INTO users (userName, rut, email, phone, region, commune, password) VALUES (?, ?, ?, ?, ?, ?, ?)';
     connection.query(query, [username, rut, email, phone, region, comuna, hashedPassword], (err, result) => {
       if (err) {

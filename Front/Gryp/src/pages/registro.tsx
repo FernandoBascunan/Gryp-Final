@@ -53,8 +53,7 @@ const Registro: React.FC = () => {
   const validatePassword = (password: string) => password.length >= 8;
 
   const handleRegistro = async () => {
-    console.log("Botón de registro presionado"); 
-    console.log("Valores actuales:", { username, rut, email, phone, region, comuna, password });
+
     
     const newErrors: { [key: string]: string } = {};
 
@@ -82,7 +81,6 @@ const Registro: React.FC = () => {
           comuna,
           password
         });
-        console.log("Respuesta recibida:", response);
         
         if (response.status === 201) {
           console.log('Registro exitoso');

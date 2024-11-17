@@ -6,7 +6,7 @@ CREATE TABLE users (
     phone VARCHAR(50),
     region VARCHAR(50),
     commune VARCHAR(50),
-    password VARCHAR(50)
+    password VARCHAR(255)
 );
 
 CREATE TABLE waiter (

@@ -29,9 +29,7 @@ export const useUserData = () => {
         const token = localStorage.getItem('token');
         
         if (token) {
-          console.log('Token almacenado:', token);
           const decodedToken = jwtDecode<DecodedToken>(token);
-          console.log('Token decodificado:', decodedToken);
           
           const userData: UserData = {
             id: decodedToken.id,
@@ -42,7 +40,6 @@ export const useUserData = () => {
             region: decodedToken.region,
           };
           
-          console.log('Datos de usuario extraídos:', userData);
           setUser(userData);
         } else {
           console.log('No se encontró token en localStorage');
