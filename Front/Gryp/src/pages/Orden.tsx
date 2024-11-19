@@ -123,7 +123,6 @@ const Orden: React.FC = () => {
 
   const handleSaveOrder = async () => {
     if (!currentOrder.waiterID || !currentOrder.tableID || selectedItems.length === 0) {
-      // Show an alert here indicating missing fields if necessary
       return;
     }
   
@@ -132,13 +131,12 @@ const Orden: React.FC = () => {
       const url = isEditing 
         ? `http://localhost:3000/api/orders/${currentOrder.orderID}`
         : 'http://localhost:3000/api/orders';
-  
-      // Prepare the payload
+
       const payload = {
         waiterID: currentOrder.waiterID,
         tableID: currentOrder.tableID,
         userID: currentOrder.userID,
-        menuItems: selectedItems, // Sending IDs as an array
+        menuItems: selectedItems,
       };
   
       const response = await fetch(url, {

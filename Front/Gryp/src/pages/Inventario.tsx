@@ -228,8 +228,6 @@ const Inventario: React.FC = () => {
             </table>
           )}
         </div>
-
-        {/* Modal para Agregar/Editar */}
         <IonModal isOpen={showModal} onDidDismiss={() => setShowModal(false)}>
           <IonHeader>
             <IonToolbar>
@@ -291,8 +289,6 @@ const Inventario: React.FC = () => {
             </form>
           </IonContent>
         </IonModal>
-
-        {/* Action Sheet para Editar o Eliminar */}
         <IonActionSheet
           isOpen={actionSheetVisible}
           onDidDismiss={() => setActionSheetVisible(false)}
@@ -315,8 +311,6 @@ const Inventario: React.FC = () => {
             }
           ]}
         />
-
-        {/* Alert de confirmación para eliminar */}
         <IonAlert
           isOpen={showConfirmDelete}
           onDidDismiss={() => setShowConfirmDelete(false)}

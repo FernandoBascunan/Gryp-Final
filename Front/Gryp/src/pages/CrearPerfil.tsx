@@ -42,7 +42,7 @@ const CrearPerfil: React.FC = () => {
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
 
-  // Obtener trabajadores al cargar el componente
+  // Obtener trabajadores
   useEffect(() => {
     const fetchTrabajadores = async () => {
       try {
@@ -128,7 +128,6 @@ const CrearPerfil: React.FC = () => {
       </IonHeader>
 
       <IonContent>
-        {/* Formulario para crear un nuevo trabajador */}
         <IonCard>
           <IonCardHeader>
             <IonCardTitle>Crear Nuevo Trabajador</IonCardTitle>
@@ -164,7 +163,6 @@ const CrearPerfil: React.FC = () => {
           </IonCardContent>
         </IonCard>
 
-        {/* Lista de trabajadores */}
         <IonCard>
           <IonCardHeader>
             <IonCardTitle>Lista de Trabajadores</IonCardTitle>

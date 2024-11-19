@@ -69,11 +69,3 @@ CREATE TABLE storage (
     userID INT,
     FOREIGN KEY (userID) REFERENCES users(userID) ON DELETE CASCADE
 );
-
-CREATE TABLE recipe (
-    menuID INT,
-    productID INT,
-    PRIMARY KEY (menuID, productID),
-    FOREIGN KEY (menuID) REFERENCES menu(menuID) ON DELETE CASCADE,
-    FOREIGN KEY (productID) REFERENCES storage(productID) ON DELETE CASCADE
-);

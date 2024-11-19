@@ -580,7 +580,6 @@ app.post('/api/workers/:userID', (req, res) => {
   if (!waiterName || !wRut || !wPhone) {
     return res.status(400).json({ error: 'Todos los campos son requeridos' });
   }
-
   const insertWaiterQuery = `
     INSERT INTO waiter (waiterName, wRut, wPhone) 
     VALUES (?, ?, ?);
@@ -597,7 +596,6 @@ app.post('/api/workers/:userID', (req, res) => {
       INSERT INTO workers (userID, waiterID) 
       VALUES (?, ?);
     `;
-
     connection.query(insertWorkerQuery, [userID, waiterID], (err) => {
       if (err) {
         return res.status(500).json({ error: 'Error al asociar el trabajador con el usuario', details: err.message });
@@ -610,8 +608,6 @@ app.post('/api/workers/:userID', (req, res) => {
 // Eliminar Trabajador 
 app.delete('/api/workers/:waiterID', (req, res) => {
   const waiterID = req.params.waiterID;
-
-  // Eliminar la relación en la tabla workers
   const deleteWorkerQuery = `
     DELETE FROM workers WHERE waiterID = ?;
   `;
@@ -620,17 +616,13 @@ app.delete('/api/workers/:waiterID', (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Error al eliminar la relación del trabajador', details: err.message });
     }
-
-    // Eliminar al trabajador de la tabla waiter
     const deleteWaiterQuery = `
       DELETE FROM waiter WHERE waiterID = ?;
     `;
-
     connection.query(deleteWaiterQuery, [waiterID], (err) => {
       if (err) {
         return res.status(500).json({ error: 'Error al eliminar al trabajador', details: err.message });
       }
-
       res.status(200).json({ success: true, message: 'Trabajador eliminado exitosamente' });
     });
   });
@@ -686,7 +678,7 @@ app.post('/api/menu/:id', (req, res) => {
 // Eliminar Menu 
 app.delete('/api/menu/:id', (req, res) => {
   const id = req.params.id;
-  const query = 'DELETE FROM menu WHERE productID = ?';
+  const query = 'DELETE FROM menu WHERE menuID = ?';
   connection.query(query, [id], (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Error en el servidor' });
@@ -701,29 +693,22 @@ app.delete('/api/menu/:id', (req, res) => {
 
 app.put('/api/menu/:id', (req, res) => {
   const menuId = req.params.id;
-  const { menuStatus } = req.body;
-
-  if (tableStatus !== 0 && tableStatus !== 1) {
-    return res.status(400).json({ error: 'El valor de tableStatus debe ser 0 o 1' });
+  const { menuStatus } = req.body; 
+  if (menuStatus !== 0 && menuStatus !== 1) {
+    return res.status(400).json({ error: 'El valor de menuStatus debe ser 0 o 1' });
   }
-
   const query = 'UPDATE menu SET dishStatus = ? WHERE menuID = ?';
-  connection.query(query, [tableStatus, mesaId], (err, result) => {
+  connection.query(query, [menuStatus, menuId], (err, result) => {
     if (err) {
-      console.error('Error al actualizar la disponibilidad del menu:', err);
+      console.error('Error al actualizar la disponibilidad del menú:', err);
       return res.status(500).json({ error: 'Error en el servidor' });
     }
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Mesa no encontrada' });
+      return res.status(404).json({ error: 'Plato no encontrado' });
     }
-    res.status(200).json({ success: true, message: 'Disponibilidad del menu actualizado' });
+    res.status(200).json({ success: true, message: 'Disponibilidad del menú actualizada' });
   });
 });
-
-
-
-
-
 
 
 

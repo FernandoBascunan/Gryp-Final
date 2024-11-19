@@ -20,7 +20,7 @@ import Footer from './Footer';
 import './Mesas.css';
 
 interface Mesa {
-  tableID: number;  // Cambiado de 'id' a 'tableID' para coincidir con la BD
+  tableID: number;
   tableStatus: number;
   userID: number | null;
   selected: boolean;
@@ -35,7 +35,6 @@ const Mesas: React.FC = () => {
       .then((response) => response.json())
       .then((data) => {
         if (Array.isArray(data.mesas)) {
-          // Agregar la propiedad 'selected' a cada mesa
           const mesasConSelected = data.mesas.map((mesa: any) => ({
             ...mesa,
             selected: false
@@ -52,7 +51,7 @@ const Mesas: React.FC = () => {
       });
   }, []);
 
-  // Función corregida para manejar la selección única de mesas
+
   const handleToggleChange = (tableID: number) => {
     setMesas(prevMesas => prevMesas.map(mesa => ({
       ...mesa,
@@ -60,21 +59,20 @@ const Mesas: React.FC = () => {
     })));
   };
 
-  // Función corregida para cambiar la disponibilidad
   const cambiarDisponibilidad = (tableID: number) => {
     const mesaActual = mesas.find(mesa => mesa.tableID === tableID);
     if (!mesaActual) return;
 
     const nuevoEstado = mesaActual.tableStatus === 1 ? 0 : 1;
 
-    // Actualizar el estado local
+
     setMesas(prevMesas => prevMesas.map(mesa => 
       mesa.tableID === tableID 
         ? { ...mesa, tableStatus: nuevoEstado }
         : mesa
     ));
 
-    // Enviar actualización al servidor
+
     fetch(`http://localhost:3000/api/mesas/${tableID}`, {
       method: 'PUT',
       headers: {
@@ -106,7 +104,7 @@ const Mesas: React.FC = () => {
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          // Agregar la nueva mesa al estado con el ID generado por la base de datos
+ 
           const mesaCompleta = {
             ...nuevaMesa,
             tableID: data.mesaId
