@@ -18,6 +18,7 @@ import { add, remove } from 'ionicons/icons';
 import Header from './Header';
 import Footer from './Footer';
 import './Mesas.css';
+import useUserData from '../Hooks/useUserData';
 
 interface Mesa {
   tableID: number;
@@ -27,29 +28,43 @@ interface Mesa {
 }
 
 const Mesas: React.FC = () => {
+  const user= useUserData();
+  const userID = user?.id;
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/mesas')
-      .then((response) => response.json())
+    if (!userID) {
+      setLoading(false);
+      return;
+    }
+  
+    setLoading(true);
+    fetch(`http://localhost:3000/api/mesas/${userID}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then((data) => {
-        if (Array.isArray(data.mesas)) {
+        if (data.success && Array.isArray(data.mesas)) {
           const mesasConSelected = data.mesas.map((mesa: any) => ({
             ...mesa,
-            selected: false
+            selected: false,
           }));
           setMesas(mesasConSelected);
         } else {
-          console.error('Los datos de las mesas no son un array:', data);
+          console.error('Los datos recibidos no son válidos:', data);
         }
-        setLoading(false);
       })
       .catch((error) => {
         console.error('Error al cargar las mesas:', error);
+      })
+      .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [userID]);
 
 
   const handleToggleChange = (tableID: number) => {
@@ -88,32 +103,42 @@ const Mesas: React.FC = () => {
   };
 
   const agregarMesa = () => {
+    if (!userID) {
+      console.error('El userID es necesario para agregar una mesa.');
+      return;
+    }
+  
     const nuevaMesa = {
-      tableStatus: 1,
-      userID: null,
-      selected: false
+      tableStatus: 1, // Se pasa en el cuerpo
     };
-
-    fetch('http://localhost:3000/api/mesas', {
+  
+    fetch(`http://localhost:3000/api/mesas/${userID}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(nuevaMesa),
+      body: JSON.stringify(nuevaMesa), // Solo se envía tableStatus
     })
-      .then(response => response.json())
-      .then(data => {
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
         if (data.success) {
- 
-          const mesaCompleta = {
-            ...nuevaMesa,
-            tableID: data.mesaId
+          const mesaCompleta: Mesa = {
+            tableID: data.mesaId,
+            tableStatus: nuevaMesa.tableStatus,
+            userID: Number(userID), // Conversión explícita a número
+            selected: false,
           };
-          setMesas(prevMesas => [...prevMesas, mesaCompleta]);
+          setMesas((prevMesas) => [...prevMesas, mesaCompleta]);
+        } else {
+          console.error('Error en la respuesta al agregar mesa:', data.message);
         }
       })
-      .catch(error => console.error('Error al agregar mesa:', error));
-  };
+    }
 
   const eliminarMesa = () => {
     const mesaSeleccionada = mesas.find(mesa => mesa.selected);

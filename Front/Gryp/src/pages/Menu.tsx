@@ -102,7 +102,7 @@ const Menu: React.FC = () => {
       });
       if (response.data.success) {
         const newDish: Dish = {
-          menuID: response.data.menuID, // Debe ser retornado desde la API
+          menuID: response.data.menuID, 
           dishName: newDishName,
           dishStatus: true,
         };
@@ -149,6 +149,20 @@ const Menu: React.FC = () => {
 
       <IonContent>
         <IonGrid>
+        <IonRow>
+            <IonCol size="12">
+              <IonItem>
+                <IonLabel position="floating">Nombre del nuevo plato</IonLabel>
+                <IonInput
+                  value={newDishName}
+                  onIonChange={e => setNewDishName(e.detail.value!)}
+                />
+              </IonItem>
+              <IonButton expand="block" onClick={addDish}>
+                Agregar Plato
+              </IonButton>
+            </IonCol>
+          </IonRow>
           <IonRow>
             {dishes.map(dish => (
               <IonCol size="3" key={dish.menuID}>
@@ -173,20 +187,7 @@ const Menu: React.FC = () => {
             ))}
           </IonRow>
 
-          <IonRow>
-            <IonCol size="12">
-              <IonItem>
-                <IonLabel position="floating">Nombre del nuevo plato</IonLabel>
-                <IonInput
-                  value={newDishName}
-                  onIonChange={e => setNewDishName(e.detail.value!)}
-                />
-              </IonItem>
-              <IonButton expand="block" onClick={addDish}>
-                Agregar Plato
-              </IonButton>
-            </IonCol>
-          </IonRow>
+      
         </IonGrid>
 
         <IonToast

@@ -138,10 +138,11 @@ app.get('/api/profile/:userID', (req, res) => {
 
 
 // Obtener todas las mesas
-app.get('/api/mesas', (req, res) => {
-  const query = 'SELECT * FROM tables';
+app.get('/api/mesas/:id', (req, res) => {
+  const id= req.params.id;
+  const query = 'SELECT * FROM tables where userID= ?';
   
-  connection.query(query, (err, results) => {
+  connection.query(query,[id] ,(err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Error en el servidor' });
     }
@@ -171,11 +172,12 @@ app.put('/api/mesas/:id', (req, res) => {
 });
 
 // Crear mesa
-app.post('/api/mesas', (req, res) => {
-  const { tableStatus, userID } = req.body; 
+app.post('/api/mesas/:id', (req, res) => {
+  const { tableStatus} = req.body; 
+  const userID=req.params.id;
 
   const query = 'INSERT INTO tables (tableStatus, userID) VALUES (?, ?)';
-  connection.query(query, [tableStatus || 1, userID || null], (err, result) => {
+  connection.query(query, [tableStatus || 1, userID], (err, result) => {
     if (err) {
       return res.status(500).json({ error: 'Error en el servidor' });
     }
@@ -198,23 +200,6 @@ app.delete('/api/mesas/:id', (req, res) => {
     res.status(200).json({ success: true, message: 'Mesa eliminada' });
   });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

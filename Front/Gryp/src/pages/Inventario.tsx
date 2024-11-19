@@ -12,9 +12,7 @@ import {
   IonModal,
   IonItem,
   IonLabel,
-  IonInput,
-  IonSelect,
-  IonSelectOption,
+  IonInput
 } from '@ionic/react';
 import Header from './Header';
 import Footer from './Footer';
