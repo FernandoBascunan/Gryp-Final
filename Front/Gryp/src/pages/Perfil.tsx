@@ -38,7 +38,7 @@ const Perfil: React.FC = () => {
   const phone = users?.phone;
   const region = users?.region;
 
-  console.log('Datos Perfil: ', id, userName, email, rut, phone, region);
+
 
   const handleLogout = () => {
     localStorage.removeItem('token');

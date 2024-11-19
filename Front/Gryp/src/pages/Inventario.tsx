@@ -5,13 +5,16 @@ import {
   IonToolbar,
   IonTitle,
   IonContent,
-  IonGrid,
-  IonRow,
-  IonCol,
   IonSpinner,
   IonAlert,
   IonButton,
   IonActionSheet,
+  IonModal,
+  IonItem,
+  IonLabel,
+  IonInput,
+  IonSelect,
+  IonSelectOption,
 } from '@ionic/react';
 import Header from './Header';
 import Footer from './Footer';
@@ -28,6 +31,22 @@ interface Producto {
   amount: number;
 }
 
+interface ProductForm {
+  productType: string;
+  loc: string;
+  productName: string;
+  unit: string;
+  amount: number;
+}
+
+const INITIAL_FORM: ProductForm = {
+  productType: '',
+  loc: '',
+  productName: '',
+  unit: '',
+  amount: 0,
+};
+
 const Inventario: React.FC = () => {
   const id = useUserData()?.id;
   const [inventario, setInventario] = useState<Producto[]>([]);
@@ -35,35 +54,110 @@ const Inventario: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Producto | null>(null);
   const [actionSheetVisible, setActionSheetVisible] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState<ProductForm>(INITIAL_FORM);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+
+  const fetchInventario = async () => {
+    if (!id) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.get(`http://localhost:3000/api/inventario/${id}`);
+      if (response.data.success) {
+        setInventario(response.data.storage);
+      } else {
+        setError('No se pudo cargar el inventario.');
+      }
+    } catch (err) {
+      console.error('Error al cargar el inventario:', err);
+      setError('Error al cargar el inventario.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchInventario = async () => {
-      if (!id) return;
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await axios.get(`http://localhost:3000/api/inventario/${id}`);
-        if (response.data.success) {
-          setInventario(response.data.storage);
-        } else {
-          setError('No se pudo cargar el inventario.');
-        }
-      } catch (err) {
-        console.error('Error al cargar el inventario:', err);
-        setError('Error al cargar el inventario.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchInventario();
   }, [id]);
+
+  const handleAdd = async () => {
+    try {
+      await axios.post(`http://localhost:3000/api/inventario/${id}`, {
+        pType: formData.productType,
+        loc: formData.loc,
+        pName: formData.productName,
+        amount: formData.amount,
+        unit: formData.unit
+      });
+      setShowModal(false);
+      setFormData(INITIAL_FORM);
+      fetchInventario();
+    } catch (err) {
+      setError('Error al agregar el producto');
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!selectedProduct) return;
+    
+    try {
+      await axios.put(`http://localhost:3000/api/inventario/${selectedProduct.productID}`, {
+        pType: formData.productType,
+        loc: formData.loc,
+        pName: formData.productName,
+        amount: formData.amount,
+        unit: formData.unit
+      });
+      setShowModal(false);
+      setFormData(INITIAL_FORM);
+      setSelectedProduct(null);
+      fetchInventario();
+    } catch (err) {
+      setError('Error al editar el producto');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedProduct) return;
+    
+    try {
+      await axios.delete(`http://localhost:3000/api/inventario/${selectedProduct.productID}`);
+      setShowConfirmDelete(false);
+      setSelectedProduct(null);
+      fetchInventario();
+    } catch (err) {
+      setError('Error al eliminar el producto');
+    }
+  };
 
   const handleRowClick = (producto: Producto) => {
     setSelectedProduct(producto);
     setActionSheetVisible(true);
+  };
+
+  const openEditModal = () => {
+    if (selectedProduct) {
+      setFormData({
+        productType: selectedProduct.productType,
+        loc: selectedProduct.loc,
+        productName: selectedProduct.productName,
+        unit: selectedProduct.unit,
+        amount: selectedProduct.amount
+      });
+      setIsEditing(true);
+      setShowModal(true);
+      setActionSheetVisible(false);
+    }
+  };
+
+  const openAddModal = () => {
+    setFormData(INITIAL_FORM);
+    setIsEditing(false);
+    setShowModal(true);
   };
 
   return (
@@ -78,7 +172,12 @@ const Inventario: React.FC = () => {
         </IonHeader>
 
         <div className="table-container">
-          <IonButton expand="block" color="primary" className="add-button">
+          <IonButton 
+            expand="block" 
+            color="primary" 
+            className="add-button"
+            onClick={openAddModal}
+          >
             Agregar Producto
           </IonButton>
 
@@ -130,6 +229,69 @@ const Inventario: React.FC = () => {
           )}
         </div>
 
+        {/* Modal para Agregar/Editar */}
+        <IonModal isOpen={showModal} onDidDismiss={() => setShowModal(false)}>
+          <IonHeader>
+            <IonToolbar>
+              <IonTitle>{isEditing ? 'Editar Producto' : 'Agregar Producto'}</IonTitle>
+            </IonToolbar>
+          </IonHeader>
+          <IonContent>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              isEditing ? handleEdit() : handleAdd();
+            }}>
+              <IonItem>
+                <IonLabel position="stacked">Tipo de Producto</IonLabel>
+                <IonInput
+                  value={formData.productType}
+                  onIonChange={e => setFormData({...formData, productType: e.detail.value || ''})}
+                  required
+                />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="stacked">Ubicación</IonLabel>
+                <IonInput
+                  value={formData.loc}
+                  onIonChange={e => setFormData({...formData, loc: e.detail.value || ''})}
+                  required
+                />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="stacked">Nombre del Producto</IonLabel>
+                <IonInput
+                  value={formData.productName}
+                  onIonChange={e => setFormData({...formData, productName: e.detail.value || ''})}
+                  required
+                />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="stacked">Cantidad</IonLabel>
+                <IonInput
+                  type="number"
+                  value={formData.amount}
+                  onIonChange={e => setFormData({...formData, amount: parseInt(e.detail.value || '0')})}
+                  required
+                />
+              </IonItem>
+              <IonItem>
+                <IonLabel position="stacked">Unidad</IonLabel>
+                <IonInput
+                  value={formData.unit}
+                  onIonChange={e => setFormData({...formData, unit: e.detail.value || ''})}
+                  required
+                />
+              </IonItem>
+              <IonButton expand="block" type="submit">
+                {isEditing ? 'Guardar Cambios' : 'Agregar'}
+              </IonButton>
+              <IonButton expand="block" color="medium" onClick={() => setShowModal(false)}>
+                Cancelar
+              </IonButton>
+            </form>
+          </IonContent>
+        </IonModal>
+
         {/* Action Sheet para Editar o Eliminar */}
         <IonActionSheet
           isOpen={actionSheetVisible}
@@ -137,21 +299,39 @@ const Inventario: React.FC = () => {
           buttons={[
             {
               text: 'Editar',
-              handler: () => {
-                console.log('Editar producto:', selectedProduct);
-              },
+              handler: openEditModal
             },
             {
               text: 'Eliminar',
               role: 'destructive',
               handler: () => {
-                console.log('Eliminar producto:', selectedProduct);
-              },
+                setShowConfirmDelete(true);
+                setActionSheetVisible(false);
+              }
             },
             {
               text: 'Cancelar',
-              role: 'cancel',
+              role: 'cancel'
+            }
+          ]}
+        />
+
+        {/* Alert de confirmación para eliminar */}
+        <IonAlert
+          isOpen={showConfirmDelete}
+          onDidDismiss={() => setShowConfirmDelete(false)}
+          header="Confirmar eliminación"
+          message="¿Está seguro que desea eliminar este producto?"
+          buttons={[
+            {
+              text: 'Cancelar',
+              role: 'cancel'
             },
+            {
+              text: 'Eliminar',
+              role: 'destructive',
+              handler: handleDelete
+            }
           ]}
         />
       </IonContent>

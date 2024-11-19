@@ -8,6 +8,7 @@ import {
 import '../pages/Orden.css';
 import Footer from './Footer';
 import Header from './Header';
+import useUserData from '../Hooks/useUserData';
 
 interface Order {
   orderID: number;
@@ -30,6 +31,8 @@ interface Waiter {
 }
 
 const Orden: React.FC = () => {
+  const user= useUserData();
+  const userID= user?.id;
   const [orders, setOrders] = useState<Order[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<Order>({
@@ -47,7 +50,6 @@ const Orden: React.FC = () => {
   const [tables, setTables] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
-
   useEffect(() => {
     fetchData();
   }, []);

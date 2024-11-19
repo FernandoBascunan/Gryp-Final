@@ -95,6 +95,9 @@ app.post('/api/login', async (req, res) => {
   });
 });
 
+
+
+
 // Obtener perfil de usuario
 app.get('/api/profile/:userID', (req, res) => {
   const userID = req.params.userID;
@@ -110,9 +113,33 @@ app.get('/api/profile/:userID', (req, res) => {
   });
 });
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// MESAS API
+
+
+
 // Obtener todas las mesas
 app.get('/api/mesas', (req, res) => {
-  const query = 'SELECT * FROM tables'; // Suponiendo que la tabla de mesas se llama "tables"
+  const query = 'SELECT * FROM tables';
   
   connection.query(query, (err, results) => {
     if (err) {
@@ -121,12 +148,11 @@ app.get('/api/mesas', (req, res) => {
     res.status(200).json({ success: true, mesas: results });
   });
 });
-
+// Editar Mesas
 app.put('/api/mesas/:id', (req, res) => {
   const mesaId = req.params.id;
   const { tableStatus } = req.body;
 
-  // Asegúrate de que tableStatus sea 0 o 1
   if (tableStatus !== 0 && tableStatus !== 1) {
     return res.status(400).json({ error: 'El valor de tableStatus debe ser 0 o 1' });
   }
@@ -144,10 +170,9 @@ app.put('/api/mesas/:id', (req, res) => {
   });
 });
 
-
-// Agregar una nueva mesa
+// Crear mesa
 app.post('/api/mesas', (req, res) => {
-  const { tableStatus, userID } = req.body; // Asumiendo que los valores de tableStatus (1 o 0) se pasan desde el cuerpo
+  const { tableStatus, userID } = req.body; 
 
   const query = 'INSERT INTO tables (tableStatus, userID) VALUES (?, ?)';
   connection.query(query, [tableStatus || 1, userID || null], (err, result) => {
@@ -158,7 +183,7 @@ app.post('/api/mesas', (req, res) => {
   });
 });
 
-// Eliminar una mesa
+// Eliminar mesa
 app.delete('/api/mesas/:id', (req, res) => {
   const mesaId = req.params.id;
 
@@ -174,7 +199,43 @@ app.delete('/api/mesas/:id', (req, res) => {
   });
 });
 
-// Obtener todas las órdenes con sus detalles
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ORDENES API
+
+
+
+
+
+
+// Obtener todas las órdenes 
 app.get('/api/orders', (req, res) => {
   const query = `
     SELECT 
@@ -199,8 +260,6 @@ app.get('/api/orders', (req, res) => {
       console.error('Error al obtener órdenes:', err);
       return res.status(500).json({ error: 'Error en el servidor' });
     }
-    
-    // Formatear los platos como array
     const formattedResults = results.map(order => ({
       ...order,
       dishes: order.dishes ? order.dishes.split(',') : []
@@ -210,39 +269,31 @@ app.get('/api/orders', (req, res) => {
   });
 });
 
-// Crear nueva orden
+// Crear orden
 app.post('/api/orders', (req, res) => {
   const { waiterID, tableID, userID, menuItems } = req.body;
-  
-  // Validaciones
+
   if (!waiterID || !tableID || !userID || !Array.isArray(menuItems)) {
     return res.status(400).json({ 
       success: false, 
       error: 'Datos incompletos o inválidos' 
     });
   }
-
   connection.beginTransaction(err => {
     if (err) {
       return res.status(500).json({ error: 'Error al iniciar la transacción' });
     }
-
-    // Primero insertamos la orden principal
     const orderQuery = `
       INSERT INTO orders (waiterID, tableID, userID) 
       VALUES (?, ?, ?)
     `;
-
     connection.query(orderQuery, [waiterID, tableID, userID], (err, result) => {
       if (err) {
         return connection.rollback(() => {
           res.status(500).json({ error: 'Error al crear la orden' });
         });
       }
-
       const orderID = result.insertId;
-
-      // Si no hay items del menú, completamos la transacción
       if (menuItems.length === 0) {
         return connection.commit(err => {
           if (err) {
@@ -253,22 +304,18 @@ app.post('/api/orders', (req, res) => {
           res.json({ success: true, orderID });
         });
       }
-
-      // Preparamos la inserción de los items del menú
       const itemsQuery = `
         INSERT INTO orderContent (orderID, menuID, userID) 
         VALUES ?
       `;
-      
+    
       const itemValues = menuItems.map(menuID => [orderID, menuID, userID]);
-
       connection.query(itemsQuery, [itemValues], (err) => {
         if (err) {
           return connection.rollback(() => {
             res.status(500).json({ error: 'Error al agregar los platos' });
           });
         }
-
         connection.commit(err => {
           if (err) {
             return connection.rollback(() => {
@@ -282,52 +329,41 @@ app.post('/api/orders', (req, res) => {
   });
 });
 
-// Actualizar orden
+// Editar orden
 app.put('/api/orders/:orderID', (req, res) => {
   const orderID = req.params.orderID;
   const { waiterID, tableID, userID, menuItems } = req.body;
-
-  // Validaciones
   if (!waiterID || !tableID || !userID || !Array.isArray(menuItems)) {
     return res.status(400).json({ 
       success: false, 
       error: 'Datos incompletos o inválidos' 
     });
   }
-
   connection.beginTransaction(err => {
     if (err) {
       return res.status(500).json({ error: 'Error al iniciar la transacción' });
     }
-
-    // Actualizamos la información principal de la orden
     const orderQuery = `
       UPDATE orders 
       SET waiterID = ?, tableID = ?, userID = ? 
       WHERE orderID = ?
     `;
-
     connection.query(orderQuery, [waiterID, tableID, userID, orderID], (err) => {
       if (err) {
         return connection.rollback(() => {
           res.status(500).json({ error: 'Error al actualizar la orden' });
         });
       }
-
-      // Eliminamos los items anteriores
       const deleteQuery = `
         DELETE FROM orderContent 
         WHERE orderID = ?
       `;
-
       connection.query(deleteQuery, [orderID], (err) => {
         if (err) {
           return connection.rollback(() => {
             res.status(500).json({ error: 'Error al actualizar los platos' });
           });
         }
-
-        // Si no hay nuevos items, completamos la transacción
         if (menuItems.length === 0) {
           return connection.commit(err => {
             if (err) {
@@ -338,22 +374,17 @@ app.put('/api/orders/:orderID', (req, res) => {
             res.json({ success: true, message: 'Orden actualizada con éxito' });
           });
         }
-
-        // Insertamos los nuevos items
         const itemsQuery = `
           INSERT INTO orderContent (orderID, menuID, userID) 
           VALUES ?
         `;
-        
         const itemValues = menuItems.map(menuID => [orderID, menuID, userID]);
-
         connection.query(itemsQuery, [itemValues], (err) => {
           if (err) {
             return connection.rollback(() => {
               res.status(500).json({ error: 'Error al agregar los platos' });
             });
           }
-
           connection.commit(err => {
             if (err) {
               return connection.rollback(() => {
@@ -367,12 +398,9 @@ app.put('/api/orders/:orderID', (req, res) => {
     });
   });
 });
-
 // Eliminar orden
 app.delete('/api/orders/:orderID', (req, res) => {
   const orderID = req.params.orderID;
-
-  // La eliminación en cascada manejará la eliminación de orderContent
   const query = 'DELETE FROM orders WHERE orderID = ?';
   
   connection.query(query, [orderID], (err, result) => {
@@ -385,7 +413,6 @@ app.delete('/api/orders/:orderID', (req, res) => {
     res.json({ success: true, message: 'Orden eliminada con éxito' });
   });
 });
-
 // Obtener menú para el desplegable
 app.get('/api/menu', (req, res) => {
   const query = `
@@ -402,7 +429,6 @@ app.get('/api/menu', (req, res) => {
     res.json({ success: true, menu: results });
   });
 });
-
 // Obtener meseros para el desplegable
 app.get('/api/waiters', (req, res) => {
   const query = `
@@ -418,7 +444,6 @@ app.get('/api/waiters', (req, res) => {
     res.json({ success: true, waiters: results });
   });
 });
-
 // Obtener mesas para el desplegable
 app.get('/api/tables', (req, res) => {
   const query = `
@@ -435,7 +460,32 @@ app.get('/api/tables', (req, res) => {
   });
 });
 
-// Obtener inventario del usuario
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// INVENTARIO API
+
+
+// Obtener inventario
 app.get('/api/inventario/:userID', (req, res) => {
   const userID = req.params.userID;
   const query = 'SELECT * FROM storage WHERE userID = ?';
@@ -449,6 +499,150 @@ app.get('/api/inventario/:userID', (req, res) => {
     res.status(200).json({ success: true, storage: results });
   });
 });
+// Eliminar Item
+app.delete('/api/inventario/:id', (req, res) => {
+  const id = req.params.id;
+  const query = 'DELETE FROM storage WHERE productID = ?';
+  connection.query(query, [id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'Item no encontrado' });
+    }
+    res.json({ success: true, message: 'Item eliminado con éxito' });
+  });
+});
+// Editar item
+app.put('/api/inventario/:id', (req, res) => {
+  const id = req.params.id;
+  const { pType, loc, pName, amount, unit } = req.body;
+  const query = 'UPDATE storage SET productType = ?, loc = ?, productName = ?, amount = ?, unit = ? WHERE productID = ?';
+  connection.query(query, [pType, loc, pName, amount, unit, id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'Item no encontrado' });
+    }
+    res.json({ success: true, message: 'Item modificado con éxito' });
+  });
+});
+// Agregar item
+app.post('/api/inventario/:id', (req, res) => {
+  const id = req.params.id;
+  const { pType, loc, pName, amount, unit } = req.body;
+  const query = 'INSERT INTO storage (productType, loc, productName, amount, unit, userID) VALUES (?, ?, ?, ?, ?, ?)';
+  connection.query(query, [pType, loc, pName, amount, unit, id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    res.json({ success: true, message: 'Item agregado correctamente' });
+  });
+});
+
+
+
+
+
+
+
+
+
+
+
+// TRABAJADORES API
+
+// Obtener trabajadores 
+app.get('/api/workers/:userID', (req, res) => {
+  const userID = req.params.userID;
+  const query = `
+    SELECT waiter.waiterID, waiter.waiterName, waiter.wRut, waiter.wPhone
+    FROM waiter
+    JOIN workers ON waiter.waiterID = workers.waiterID
+    WHERE workers.userID = ?;
+  `;
+  connection.query(query, [userID], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error en el servidor', details: err.message });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'No existen datos para cargar' });
+    }
+    res.status(200).json({ success: true, workers: results });
+  });
+});
+// Crear Trabajador
+app.post('/api/workers/:userID', (req, res) => {
+  const userID = req.params.userID;
+  const { waiterName, wRut, wPhone } = req.body;
+
+  if (!waiterName || !wRut || !wPhone) {
+    return res.status(400).json({ error: 'Todos los campos son requeridos' });
+  }
+
+  const insertWaiterQuery = `
+    INSERT INTO waiter (waiterName, wRut, wPhone) 
+    VALUES (?, ?, ?);
+  `;
+  
+  connection.query(insertWaiterQuery, [waiterName, wRut, wPhone], (err, waiterResult) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error al crear el trabajador', details: err.message });
+    }
+
+    const waiterID = waiterResult.insertId;
+
+    const insertWorkerQuery = `
+      INSERT INTO workers (userID, waiterID) 
+      VALUES (?, ?);
+    `;
+
+    connection.query(insertWorkerQuery, [userID, waiterID], (err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Error al asociar el trabajador con el usuario', details: err.message });
+      }
+
+      res.status(201).json({ success: true, message: 'Trabajador creado y asociado exitosamente', waiterID });
+    });
+  });
+});
+// Eliminar Trabajador 
+app.delete('/api/workers/:waiterID', (req, res) => {
+  const waiterID = req.params.waiterID;
+
+  // Eliminar la relación en la tabla workers
+  const deleteWorkerQuery = `
+    DELETE FROM workers WHERE waiterID = ?;
+  `;
+
+  connection.query(deleteWorkerQuery, [waiterID], (err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error al eliminar la relación del trabajador', details: err.message });
+    }
+
+    // Eliminar al trabajador de la tabla waiter
+    const deleteWaiterQuery = `
+      DELETE FROM waiter WHERE waiterID = ?;
+    `;
+
+    connection.query(deleteWaiterQuery, [waiterID], (err) => {
+      if (err) {
+        return res.status(500).json({ error: 'Error al eliminar al trabajador', details: err.message });
+      }
+
+      res.status(200).json({ success: true, message: 'Trabajador eliminado exitosamente' });
+    });
+  });
+});
+
+
+
+
+// MENU API 
+
+
+
 
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);

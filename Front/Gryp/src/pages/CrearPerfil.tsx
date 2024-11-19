@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonContent,
   IonHeader,
@@ -18,45 +18,54 @@ import {
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import Header from './Header';
-
-
+import useUserData from '../Hooks/useUserData';
+import axios from 'axios';
 
 interface Trabajador {
-  id: number;
-  nombre: string;
-  rut: string;
-  telefono: string;
+  waiterID: number;
+  waiterName: string;
+  wRut: string;
+  wPhone: string;
 }
 
 const CrearPerfil: React.FC = () => {
-    const history = useHistory();
+  const history = useHistory();
+  const user = useUserData();
+  const userID = user?.id;
 
-  const trabajadoresIniciales = [
-    {
-      id: 1,
-      nombre: "Juan Pérez",
-      rut: "12.345.678-9",
-      telefono: "+56912345678"
-    },
-    {
-      id: 2,
-      nombre: "María González",
-      rut: "98.765.432-1",
-      telefono: "+56987654321"
-    }
-  ];
-
-  const [trabajadores, setTrabajadores] = useState<Trabajador[]>(trabajadoresIniciales);
-  const [nuevoTrabajador, setNuevoTrabajador] = useState<Omit<Trabajador, 'id'>>({
-    nombre: '',
-    rut: '',
-    telefono: ''
+  const [trabajadores, setTrabajadores] = useState<Trabajador[]>([]);
+  const [nuevoTrabajador, setNuevoTrabajador] = useState<Omit<Trabajador, 'waiterID'>>({
+    waiterName: '',
+    wRut: '',
+    wPhone: ''
   });
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
 
+  // Obtener trabajadores al cargar el componente
+  useEffect(() => {
+    const fetchTrabajadores = async () => {
+      try {
+        const response = await axios.get(`http://localhost:3000/api/workers/${userID}`);
+        if (response.data.success) {
+          setTrabajadores(response.data.workers);
+        } else {
+          setAlertMessage('No se encontraron trabajadores.');
+          setShowAlert(true);
+        }
+      } catch (error) {
+        console.error('Error al cargar trabajadores:', error);
+        setAlertMessage('Error al cargar los trabajadores.');
+        setShowAlert(true);
+      }
+    };
 
-  const handleInputChange = (e: CustomEvent, field: keyof Omit<Trabajador, 'id'>) => {
+    if (userID) {
+      fetchTrabajadores();
+    }
+  }, [userID]);
+
+  const handleInputChange = (e: CustomEvent, field: keyof Omit<Trabajador, 'waiterID'>) => {
     setNuevoTrabajador({
       ...nuevoTrabajador,
       [field]: e.detail.value!
@@ -64,7 +73,7 @@ const CrearPerfil: React.FC = () => {
   };
 
   const validarDatos = (): boolean => {
-    if (!nuevoTrabajador.nombre || !nuevoTrabajador.rut || !nuevoTrabajador.telefono) {
+    if (!nuevoTrabajador.waiterName || !nuevoTrabajador.wRut || !nuevoTrabajador.wPhone) {
       setAlertMessage('Todos los campos son obligatorios');
       setShowAlert(true);
       return false;
@@ -72,36 +81,46 @@ const CrearPerfil: React.FC = () => {
     return true;
   };
 
-  const crearTrabajador = () => {
+  const crearTrabajador = async () => {
     if (validarDatos()) {
-      const nuevoId = trabajadores.length > 0 ? 
-        Math.max(...trabajadores.map(t => t.id)) + 1 : 1;
+      try {
+        const response = await axios.post(`http://localhost:3000/api/workers/${userID}`, nuevoTrabajador);
+        if (response.data.success) {
+          setTrabajadores([...trabajadores, { waiterID: response.data.waiterID, ...nuevoTrabajador }]);
+          setNuevoTrabajador({ waiterName: '', wRut: '', wPhone: '' });
+          setAlertMessage('Trabajador creado exitosamente');
+        } else {
+          setAlertMessage('Error al crear el trabajador.');
+        }
+      } catch (error) {
+        console.error('Error al crear trabajador:', error);
+        setAlertMessage('Error al conectar con el servidor.');
+      } finally {
+        setShowAlert(true);
+      }
+    }
+  };
 
-      const nuevoRegistro = {
-        id: nuevoId,
-        ...nuevoTrabajador
-      };
-
-      setTrabajadores([...trabajadores, nuevoRegistro]);
-      
-      setNuevoTrabajador({
-        nombre: '',
-        rut: '',
-        telefono: ''
-      });
-
-      setAlertMessage('Trabajador creado exitosamente');
+  const eliminarTrabajador = async (waiterID: number) => {
+    try {
+      const response = await axios.delete(`http://localhost:3000/api/workers/${waiterID}`);
+      if (response.data.success) {
+        setTrabajadores(trabajadores.filter(t => t.waiterID !== waiterID));
+        setAlertMessage('Trabajador eliminado exitosamente');
+      } else {
+        setAlertMessage('Error al eliminar el trabajador.');
+      }
+    } catch (error) {
+      console.error('Error al eliminar trabajador:', error);
+      setAlertMessage('Error al conectar con el servidor.');
+    } finally {
       setShowAlert(true);
     }
   };
 
-  const eliminarTrabajador = (id: number) => {
-    setTrabajadores(trabajadores.filter(t => t.id !== id));
-  };
-
   return (
     <IonPage>
-      <Header/>
+      <Header />
       <IonHeader>
         <IonToolbar color="primary">
           <IonTitle>Gestión de Trabajadores</IonTitle>
@@ -109,7 +128,7 @@ const CrearPerfil: React.FC = () => {
       </IonHeader>
 
       <IonContent>
-
+        {/* Formulario para crear un nuevo trabajador */}
         <IonCard>
           <IonCardHeader>
             <IonCardTitle>Crear Nuevo Trabajador</IonCardTitle>
@@ -118,38 +137,34 @@ const CrearPerfil: React.FC = () => {
             <IonItem>
               <IonLabel position="floating">Nombre</IonLabel>
               <IonInput
-                value={nuevoTrabajador.nombre}
-                onIonChange={(e) => handleInputChange(e, 'nombre')}
+                value={nuevoTrabajador.waiterName}
+                onIonChange={(e) => handleInputChange(e, 'waiterName')}
                 type="text"
               />
             </IonItem>
             <IonItem>
               <IonLabel position="floating">RUT</IonLabel>
               <IonInput
-                value={nuevoTrabajador.rut}
-                onIonChange={(e) => handleInputChange(e, 'rut')}
+                value={nuevoTrabajador.wRut}
+                onIonChange={(e) => handleInputChange(e, 'wRut')}
                 type="text"
               />
             </IonItem>
             <IonItem>
               <IonLabel position="floating">Teléfono</IonLabel>
               <IonInput
-                value={nuevoTrabajador.telefono}
-                onIonChange={(e) => handleInputChange(e, 'telefono')}
+                value={nuevoTrabajador.wPhone}
+                onIonChange={(e) => handleInputChange(e, 'wPhone')}
                 type="tel"
               />
             </IonItem>
-            <IonButton 
-              expand="block" 
-              onClick={crearTrabajador} 
-              className="ion-margin-top"
-            >
+            <IonButton expand="block" onClick={crearTrabajador} className="ion-margin-top">
               Crear Trabajador
             </IonButton>
           </IonCardContent>
         </IonCard>
 
-
+        {/* Lista de trabajadores */}
         <IonCard>
           <IonCardHeader>
             <IonCardTitle>Lista de Trabajadores</IonCardTitle>
@@ -157,16 +172,16 @@ const CrearPerfil: React.FC = () => {
           <IonCardContent>
             <IonList>
               {trabajadores.map(trabajador => (
-                <IonItem key={trabajador.id}>
+                <IonItem key={trabajador.waiterID}>
                   <IonLabel>
-                    <h2>{trabajador.nombre}</h2>
-                    <p>RUT: {trabajador.rut}</p>
-                    <p>Teléfono: {trabajador.telefono}</p>
+                    <h2>{trabajador.waiterName}</h2>
+                    <p>RUT: {trabajador.wRut}</p>
+                    <p>Teléfono: {trabajador.wPhone}</p>
                   </IonLabel>
-                  <IonButton 
-                    slot="end" 
-                    color="danger" 
-                    onClick={() => eliminarTrabajador(trabajador.id)}
+                  <IonButton
+                    slot="end"
+                    color="danger"
+                    onClick={() => eliminarTrabajador(trabajador.waiterID)}
                   >
                     Eliminar
                   </IonButton>
@@ -175,14 +190,16 @@ const CrearPerfil: React.FC = () => {
             </IonList>
           </IonCardContent>
         </IonCard>
-        <IonButton 
-          expand="block" 
-          color="medium" 
+
+        <IonButton
+          expand="block"
+          color="medium"
           className="ion-margin"
           onClick={() => history.push('/perfil')}
         >
           Volver
         </IonButton>
+
         <IonAlert
           isOpen={showAlert}
           onDidDismiss={() => setShowAlert(false)}
