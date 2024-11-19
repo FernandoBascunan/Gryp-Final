@@ -639,7 +639,92 @@ app.delete('/api/workers/:waiterID', (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 // MENU API 
+
+// Obtener Menu
+app.get('/api/menu/:userID', (req, res) => {
+  const userID = req.params.userID;
+  const query = 'SELECT * FROM menu WHERE userID = ?';
+  connection.query(query, [userID], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'No existen datos para cargar' });
+    }
+    res.status(200).json({ success: true, storage: results });
+  });
+});
+
+// Agregar Menu
+app.post('/api/menu/:id', (req, res) => {
+  const id = req.params.id;
+  const { dishName,dishStatus} = req.body;
+  const query = 'INSERT INTO menu (dishName,dishStatus, userID) VALUES (?, ?, ?)';
+  connection.query(query, [dishName,dishStatus, id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    res.json({ success: true, message: 'Item agregado correctamente' });
+  });
+});
+
+
+// Eliminar Menu 
+app.delete('/api/menu/:id', (req, res) => {
+  const id = req.params.id;
+  const query = 'DELETE FROM menu WHERE productID = ?';
+  connection.query(query, [id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ error: 'Item no encontrado' });
+    }
+    res.json({ success: true, message: 'Item eliminado con éxito' });
+  });
+});
+// Editar disponibilidad Menu
+
+app.put('/api/menu/:id', (req, res) => {
+  const menuId = req.params.id;
+  const { menuStatus } = req.body;
+
+  if (tableStatus !== 0 && tableStatus !== 1) {
+    return res.status(400).json({ error: 'El valor de tableStatus debe ser 0 o 1' });
+  }
+
+  const query = 'UPDATE menu SET dishStatus = ? WHERE menuID = ?';
+  connection.query(query, [tableStatus, mesaId], (err, result) => {
+    if (err) {
+      console.error('Error al actualizar la disponibilidad del menu:', err);
+      return res.status(500).json({ error: 'Error en el servidor' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Mesa no encontrada' });
+    }
+    res.status(200).json({ success: true, message: 'Disponibilidad del menu actualizado' });
+  });
+});
+
+
+
+
+
+
 
 
 
