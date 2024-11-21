@@ -16,13 +16,13 @@ interface Order {
   tableID: number;
   userID: number;
   waiterName?: string;
-  tableNumber?: number;
-  items?: string;
+  dishes?: string[];
 }
 
 interface MenuItem {
   menuID: number;
   dishName: string;
+  dishStatus: boolean;
 }
 
 interface Waiter {
@@ -30,52 +30,62 @@ interface Waiter {
   waiterName: string;
 }
 
+interface Table {
+  tableID: number;
+  tableNumber: number;
+}
+
 const Orden: React.FC = () => {
-  const user= useUserData();
-  const userID= user?.id;
+  const user = useUserData();
+  const userID = user?.id ? Number(user.id) : 0;
   const [orders, setOrders] = useState<Order[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [currentOrder, setCurrentOrder] = useState<Order>({
     orderID: 0,
     waiterID: 0,
     tableID: 0,
-    userID: 1,
-    items: ''
+    userID: userID || 0,
+    dishes: []
   });
   const [isEditing, setIsEditing] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showActionSheet, setShowActionSheet] = useState(false);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [waiters, setWaiters] = useState<Waiter[]>([]);
-  const [tables, setTables] = useState<any[]>([]);
+  const [tables, setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
+
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (userID) {
+      fetchData();
+    }
+  }, [userID]);
 
   const fetchData = async () => {
+    if (!userID) return;
+
     setLoading(true);
     try {
       // Obtener órdenes
-      const ordersRes = await fetch('http://localhost:3000/api/orders');
+      const ordersRes = await fetch(`http://localhost:3000/api/orders/${userID}`);
       const ordersData = await ordersRes.json();
       if (ordersData.success) setOrders(ordersData.orders);
 
       // Obtener menú
-      const menuRes = await fetch('http://localhost:3000/api/menu');
+      const menuRes = await fetch(`http://localhost:3000/api/menuD/${userID}`);
       const menuData = await menuRes.json();
       if (menuData.success) setMenuItems(menuData.menu);
 
       // Obtener meseros
-      const waitersRes = await fetch('http://localhost:3000/api/waiters');
+      const waitersRes = await fetch(`http://localhost:3000/api/waitersD/${userID}`);
       const waitersData = await waitersRes.json();
       if (waitersData.success) setWaiters(waitersData.waiters);
 
       // Obtener mesas
-      const tablesRes = await fetch('http://localhost:3000/api/mesas');
+      const tablesRes = await fetch(`http://localhost:3000/api/tablesD/${userID}`);
       const tablesData = await tablesRes.json();
-      if (tablesData.success) setTables(tablesData.mesas);
+      if (tablesData.success) setTables(tablesData.tables);
     } catch (error) {
       console.error('Error al cargar datos:', error);
     }
@@ -88,8 +98,8 @@ const Orden: React.FC = () => {
       orderID: 0,
       waiterID: 0,
       tableID: 0,
-      userID: 1,
-      items: ''
+      userID: userID || 0,
+      dishes: []
     });
     setSelectedItems([]);
     setShowModal(true);
@@ -98,10 +108,14 @@ const Orden: React.FC = () => {
   const handleEditOrder = (order: Order) => {
     setIsEditing(true);
     setCurrentOrder(order);
-    setSelectedItems(order.items?.split(',').map(item => {
-      const menuItem = menuItems.find(mi => mi.dishName === item.trim());
+    
+    // Convert dish names to menu item IDs
+    const selectedMenuItems = order.dishes?.map(dishName => {
+      const menuItem = menuItems.find(mi => mi.dishName === dishName);
       return menuItem ? menuItem.menuID : 0;
-    }).filter(id => id !== 0) || []);
+    }).filter(id => id !== 0) || [];
+
+    setSelectedItems(selectedMenuItems);
     setShowModal(true);
     setShowActionSheet(false);
   };
@@ -130,12 +144,12 @@ const Orden: React.FC = () => {
       const method = isEditing ? 'PUT' : 'POST';
       const url = isEditing 
         ? `http://localhost:3000/api/orders/${currentOrder.orderID}`
-        : 'http://localhost:3000/api/orders';
+        : `http://localhost:3000/api/orders/${userID}`;
 
       const payload = {
         waiterID: currentOrder.waiterID,
         tableID: currentOrder.tableID,
-        userID: currentOrder.userID,
+        userID: userID,
         menuItems: selectedItems,
       };
   
@@ -188,19 +202,13 @@ const Orden: React.FC = () => {
                 <IonCardTitle>Mesa: {order.tableID || 'Sin asignar'}</IonCardTitle>
               </IonCardHeader>
               <IonCardContent>
-  <div className="orden-items">
-    Items: {order.items
-      ? order.items
-          .split(',')
-          .map(menuID => {
-            const menuItem = menuItems.find(mi => mi.menuID === parseInt(menuID.trim(), 10));
-            return menuItem ? menuItem.dishName : `ID ${menuID} no encontrado`;
-          })
-          .join(', ')
-      : 'No items'}
-  </div>
-</IonCardContent>
-          </IonCard>          
+                <div className="orden-items">
+                  Items: {order.dishes && order.dishes.length > 0 
+                    ? order.dishes.join(', ') 
+                    : 'No items'}
+                </div>
+              </IonCardContent>
+            </IonCard>          
           ))}
         </div>
 

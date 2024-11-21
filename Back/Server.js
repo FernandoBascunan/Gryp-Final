@@ -221,7 +221,8 @@ app.delete('/api/mesas/:id', (req, res) => {
 
 
 // Obtener todas las órdenes 
-app.get('/api/orders', (req, res) => {
+app.get('/api/orders/:id', (req, res) => {
+  const userID= req.params.id;
   const query = `
     SELECT 
       o.orderID,
@@ -235,12 +236,12 @@ app.get('/api/orders', (req, res) => {
     INNER JOIN tables t ON o.tableID = t.tableID
     LEFT JOIN orderContent oc ON o.orderID = oc.orderID
     LEFT JOIN menu m ON oc.menuID = m.menuID
-    WHERE m.dishStatus = true
+    WHERE m.dishStatus = true and o.userID= ?
     GROUP BY o.orderID
     ORDER BY o.orderID DESC
   `;
 
-  connection.query(query, (err, results) => {
+  connection.query(query,[userID], (err, results) => {
     if (err) {
       console.error('Error al obtener órdenes:', err);
       return res.status(500).json({ error: 'Error en el servidor' });
@@ -255,8 +256,9 @@ app.get('/api/orders', (req, res) => {
 });
 
 // Crear orden
-app.post('/api/orders', (req, res) => {
-  const { waiterID, tableID, userID, menuItems } = req.body;
+app.post('/api/orders/:id', (req, res) => {
+  const userID= req.params.id;
+  const { waiterID, tableID,menuItems } = req.body;
 
   if (!waiterID || !tableID || !userID || !Array.isArray(menuItems)) {
     return res.status(400).json({ 
@@ -399,15 +401,16 @@ app.delete('/api/orders/:orderID', (req, res) => {
   });
 });
 // Obtener menú para el desplegable
-app.get('/api/menu', (req, res) => {
+app.get('/api/menuD/:id', (req, res) => {
+  const userID= req.params.id;
   const query = `
     SELECT menuID, dishName, dishStatus
     FROM menu 
-    WHERE dishStatus = true
+    WHERE dishStatus = true and userID =?
     ORDER BY dishName
   `;
 
-  connection.query(query, (err, results) => {
+  connection.query(query,[userID], (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Error al obtener el menú' });
     }
@@ -415,14 +418,17 @@ app.get('/api/menu', (req, res) => {
   });
 });
 // Obtener meseros para el desplegable
-app.get('/api/waiters', (req, res) => {
+app.get('/api/waitersD/:id', (req, res) => {
+  const userID= req.params.id;
   const query = `
-    SELECT waiterID, waiterName 
-    FROM waiter 
+    SELECT DISTINCT wa.waiterID, wa.waiterName 
+    FROM waiter wa 
+    Join workers w 
+    Where w.userID = ? 
     ORDER BY waiterName
   `;
 
-  connection.query(query, (err, results) => {
+  connection.query(query, [userID],(err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Error al obtener los meseros' });
     }
@@ -430,14 +436,15 @@ app.get('/api/waiters', (req, res) => {
   });
 });
 // Obtener mesas para el desplegable
-app.get('/api/tables', (req, res) => {
+app.get('/api/tablesD/:id', (req, res) => {
+  const userID= req.params.id;
   const query = `
-    SELECT tableID, tableNumber 
-    FROM tables 
-    ORDER BY tableNumber
+    SELECT tableID FROM tables 
+    WHERE userID= ?
+    ORDER BY tableID;
   `;
 
-  connection.query(query, (err, results) => {
+  connection.query(query,[userID], (err, results) => {
     if (err) {
       return res.status(500).json({ error: 'Error al obtener las mesas' });
     }
